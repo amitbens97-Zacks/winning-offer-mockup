@@ -4,8 +4,8 @@ import { html, useState, Icon, cx } from './lib.js';
 import { InlineEdit, Button } from './components.js';
 import { inputCls } from './ui.js';
 import { Screen, MoneyEdit, ValueMeter, How, StateIcon } from './kit.js';
-import { CLIENT_FILE, G_TYPES, Z_CHIPS, Z_CHIPS_F, URGENCY, NAMES, GENDER, g } from './data.js';
-import { total, payLine, capacity, checks } from './calc.js';
+import { CLIENT_FILE, G_TYPES, Z_CHIPS, URGENCY, NAMES, GENDER, g } from './data.js';
+import { total, payLine, capacity, checks, fmt } from './calc.js';
 
 const pickF = (o, k) => (GENDER === 'f' && o[`${k}F`]) || o[k];
 const chip = (on) => cx('h-9 rounded-full border-[1.5px] px-3.5 text-[14px] font-bold transition cursor-pointer', on ? 'border-brand-600 bg-brand-100 text-brand-600' : 'border-line bg-white hover:border-brand-300');
@@ -58,21 +58,48 @@ export function ValueScreen({ s, set, aside, onPrice, onSuggest, busyId }) {
 export function GuaranteeScreen({ s, set, aside, onType }) {
   const gu = s.guarantee;
   const setG = (p) => set((x) => ({ ...x, guarantee: { ...x.guarantee, ...p } }));
-  const zChips = GENDER === 'f' ? Z_CHIPS_F : Z_CHIPS;
-  const Slot = ({ k, ph }) => html`<span class="inline-block max-w-full rounded-lg bg-brand-50 px-1.5 text-brand-700 ring-1 ring-dashed ring-brand-300"><${InlineEdit} value=${gu[k]} placeholder=${ph} onSave=${(v) => setG({ [k]: v })} class="!whitespace-normal !text-brand-700" /></span>`;
-  return html`<${Screen} title=${['מה הלקוח ', 'הכי מפחד', ' שיקרה?']} sub=${`"${CLIENT_FILE.objection}". הבטחה טובה לוקחת ממנו את הסיכון הזה.`} aside=${aside}>
-    <div class="mb-4 flex flex-wrap gap-2" role="radiogroup" aria-label="סוג ההבטחה">
-      ${G_TYPES.map((t) => html`<button key=${t.id} type="button" role="radio" aria-checked=${gu.type === t.id} onClick=${() => gu.type !== t.id && onType(t.id)} class=${chip(gu.type === t.id)}>${t.label}</button>`)}
+  const Slot = ({ k, ph }) => html`<span class="inline-block max-w-full rounded-lg border-[1.5px] border-dashed border-brand-300 bg-brand-50 px-1.5 text-brand-700 hover:border-brand-600"><${InlineEdit} value=${gu[k]} placeholder=${ph} onSave=${(v) => setG({ [k]: v })} class="!whitespace-normal !text-brand-700" /></span>`;
+  return html`<${Screen} title=${['מה הלקוח ', 'הכי מפחד', ' שיקרה?']} sub=${g('ההבטחה לוקחת ממנו את הסיכון. בחר סוג, וערוך את המילים המסומנות.', 'ההבטחה לוקחת ממנו את הסיכון. בחרי סוג, וערכי את המילים המסומנות.')} aside=${aside}>
+    <!-- The fear, in his words, and the promise that answers it. -->
+    <div class="mb-5 flex items-start gap-3">
+      <span class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-error-50 text-error"><${Icon} name="user-round" size=${22} /></span>
+      <div class="rounded-2xl rounded-ss-md bg-white px-4 py-3 shadow-sm ring-1 ring-line">
+        <p class="text-[12px] font-bold text-muted">הלקוח חושב</p>
+        <p class="font-display text-[19px] font-bold leading-snug">“${CLIENT_FILE.objection}”</p>
+      </div>
     </div>
-    <section class="fb-panel !p-5">
-      ${gu.type === 'final'
-        ? html`<p class="font-display text-[21px] leading-relaxed"><${Slot} k="cond" ph="הסיבה האמיתית" /></p>`
-        : html`<p class="flex flex-wrap items-center gap-x-1.5 gap-y-2 font-display text-[21px] leading-snug"><span>אם</span><${Slot} k="y" ph="מתי" /><${Slot} k="x" ph="מה לא קרה" /><span>,</span><${Slot} k="z" ph="מה אנחנו עושים" /><span>.</span></p>
-          ${gu.cond && html`<p class="mt-2 text-[15px] text-muted"><${InlineEdit} value=${gu.cond} onSave=${(v) => setG({ cond: v })} placeholder="בתנאי ש..." /></p>`}
-          <div class="mt-4 flex flex-wrap gap-1.5">${zChips.map((z) => html`<button key=${z} type="button" onClick=${() => setG({ z })} class=${cx('h-8 rounded-full border-[1.5px] px-3 text-[13px] font-bold cursor-pointer', gu.z === z ? 'border-brand-600 bg-brand-100 text-brand-600' : 'border-line bg-white hover:border-brand-300')}>${z}</button>`)}</div>`}
-      <p class="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-3"><span class="text-[14px] font-bold text-muted">השם שלה:</span><span class="font-display text-[18px] font-bold"><${InlineEdit} value=${gu.name} placeholder="למשל: המפגש הראשון עלינו" onSave=${(v) => setG({ name: v })} /></span></p>
+    <div class="mb-4 grid grid-cols-2 gap-2 md:grid-cols-4" role="radiogroup" aria-label="סוג ההבטחה">
+      ${G_TYPES.map((t) => {
+        const on = gu.type === t.id;
+        return html`<button key=${t.id} type="button" role="radio" aria-checked=${on} onClick=${() => !on && onType(t.id)} class=${cx('flex flex-col items-start gap-1.5 rounded-2xl border-[1.5px] p-3 text-start transition cursor-pointer', on ? 'border-brand-600 bg-brand-50 ring-4 ring-brand-100' : 'border-line bg-white hover:border-brand-300')}>
+          <span class=${cx('grid h-8 w-8 place-items-center rounded-lg', on ? 'bg-brand-600 text-white' : 'bg-canvas text-brand-600')}><${Icon} name=${t.icon} size=${17} /></span>
+          <b class="text-[15px] leading-tight">${t.label}</b>
+          <span class="text-[12px] leading-snug text-muted">${t.sub}</span>
+        </button>`;
+      })}
+    </div>
+    <!-- The promise itself, laid out like a certificate. -->
+    <section class="relative overflow-hidden rounded-3xl border-2 border-brand-600 bg-white p-5 shadow-[0_10px_30px_-12px_rgba(0,56,184,.35)] md:p-6">
+      <span aria-hidden="true" class="pointer-events-none absolute -end-10 -top-10 h-32 w-32 rounded-full bg-brand-50"></span>
+      <div class="relative flex items-center gap-3">
+        <span class="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-brand-600 text-white shadow-[0_0_0_5px_#fff,0_0_0_7px_#c7d4f2]"><${Icon} name="shield-check" size=${28} /></span>
+        <div class="min-w-0">
+          <p class="text-[12px] font-bold text-brand-600">ההבטחה</p>
+          <p class="font-display text-[22px] font-black leading-tight"><${InlineEdit} value=${gu.name} placeholder="שם להבטחה" onSave=${(v) => setG({ name: v })} /></p>
+        </div>
+      </div>
+      <div class="relative mt-4 border-t border-dashed border-line pt-4">
+        ${gu.type === 'final'
+          ? html`<p class="font-display text-[20px] leading-relaxed"><${Slot} k="cond" ph="הסיבה האמיתית" /></p>`
+          : html`<p class="flex flex-wrap items-center gap-x-1.5 gap-y-2 font-display text-[20px] leading-snug"><span>אם</span><${Slot} k="y" ph="מתי" /><span class="inline-flex max-w-full items-baseline"><${Slot} k="x" ph="מה לא קרה" /><span>,</span></span><span class="inline-flex max-w-full items-baseline"><${Slot} k="z" ph="מה עושים" /><span>.</span></span></p>
+            ${gu.cond && html`<p class="mt-2 flex items-start gap-1.5 text-[14px] text-muted"><${Icon} name="info" size=${15} class="mt-0.5 shrink-0" /><${InlineEdit} value=${gu.cond} onSave=${(v) => setG({ cond: v })} placeholder="בתנאי ש..." /></p>`}`}
+      </div>
     </section>
-    <details class="group mt-3">
+    ${gu.type !== 'final' && html`<div class="mt-4">
+      <p class="mb-2 text-[14px] font-bold text-muted">ומה עושים אם זה לא קרה?</p>
+      <div class="flex flex-wrap gap-1.5">${Z_CHIPS.map((z) => html`<button key=${z} type="button" onClick=${() => setG({ z })} class=${cx('h-9 rounded-full border-[1.5px] px-3 text-[14px] font-bold transition cursor-pointer', gu.z === z ? 'border-brand-600 bg-brand-600 text-white' : 'border-line bg-white hover:border-brand-300')}>${z}</button>`)}</div>
+    </div>`}
+    <details class="group mt-4">
       <summary class="inline-flex cursor-pointer items-center gap-1 text-[14px] font-bold text-brand-600">מדיניות ביטול<${Icon} name="chevron-down" size=${14} class="transition group-open:rotate-180" /></summary>
       <textarea rows="3" class=${cx(inputCls, 'mt-2 !h-auto py-2 leading-snug')} value=${gu.cancel} onInput=${(e) => setG({ cancel: e.target.value })} aria-label="מדיניות ביטול"></textarea>
     </details>
@@ -83,7 +110,8 @@ export function GuaranteeScreen({ s, set, aside, onType }) {
 export function UrgencyScreen({ s, set, aside }) {
   const cap = capacity();
   const u = s.urgency;
-  const pick = (id) => set((x) => ({ ...x, urgency: { ...x.urgency, id }, seats: { on: id === 'seats' } }));
+  const pick = (id) => set((x) => ({ ...x, urgency: { ...x.urgency, id, newPrice: x.urgency.newPrice || Math.round((x.price * 1.15) / 100) * 100 }, seats: { on: id === 'seats' } }));
+  const setU = (p) => set((x) => ({ ...x, urgency: { ...x.urgency, ...p } }));
   const dateTxt = u.date ? new Date(u.date).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' }) : '...';
   const sub = { seats: `${cap.perMonth} לקוחות חדשים בחודש, לפי השעות שלך` };
   return html`<${Screen} title=${['למה לקנות ', 'עכשיו', '?']} sub="רק אם זה אמיתי. הצעה בלי דחיפות עדיפה על דחיפות מזויפת." aside=${aside}>
@@ -100,8 +128,15 @@ export function UrgencyScreen({ s, set, aside }) {
             <${How}><p>${Math.round(cap.forClients)} שעות בחודש ללקוחות ÷ ${cap.perClient.toFixed(1)} שעות ללקוח = ${cap.atOnce} במקביל. התוכנית 3 חודשים, אז ${cap.perMonth} חדשים בחודש.</p><//>
           </div>`}
           ${on && o.id === 'cohort' && html`<div class="rise flex flex-wrap items-center gap-3 px-4 pb-4 ps-[68px] text-[15px]">
-            <input type="date" class=${cx(inputCls, 'max-w-[200px]')} value=${u.date} onInput=${(e) => set((x) => ({ ...x, urgency: { ...x.urgency, date: e.target.value } }))} aria-label="תאריך ההתחלה" />
+            <input type="date" class=${cx(inputCls, 'max-w-[200px]')} value=${u.date} onInput=${(e) => setU({ date: e.target.value })} aria-label="תאריך ההתחלה" />
             <span class="text-muted">"מי שנרשם עד ${dateTxt} מתחיל במחזור הקרוב."</span>
+          </div>`}
+          ${on && o.id === 'price' && html`<div class="rise px-4 pb-4 ps-[68px] text-[15px]">
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <label class="flex items-center gap-2"><span class="font-bold">עד</span><input type="date" class=${cx(inputCls, 'max-w-[180px]')} value=${u.date} onInput=${(e) => setU({ date: e.target.value })} aria-label="עד איזה תאריך המחיר הנוכחי" /></label>
+              <span class="flex items-center gap-1.5"><span class="font-bold">ואז</span><${MoneyEdit} value=${u.newPrice} onSave=${(v) => setU({ newPrice: v })} /></span>
+            </div>
+            <p class="mt-2 text-muted">"עד ${dateTxt} המחיר ${fmt(s.price)}. אחרי זה ${fmt(u.newPrice)}."</p>
           </div>`}
         </div>`;
       })}

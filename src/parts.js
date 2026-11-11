@@ -21,7 +21,7 @@ export function OutcomeScreen({ s, set, aside, onMore, busy }) {
   };
   const edit = (p) => set((x) => ({ ...x, outcome: { ...x.outcome, ...p, byShark: false } }));
   const options = s.altOutcomes || OUTCOMES;
-  return html`<${Screen} title=${['לאן הלקוח ', 'מגיע', '?']} sub=${g('בחר את היעד שהלקוח בעצם קונה.', 'בחרי את היעד שהלקוח בעצם קונה.')} aside=${aside}>
+  return html`<${Screen} title=${['מה הלקוח ', 'ישיג', ' בסוף?']} sub=${g('בחר את התוצאה שבשבילה הוא קונה: לא מה תעשה איתו, מה ישתנה אצלו.', 'בחרי את התוצאה שבשבילה הוא קונה: לא מה תעשי איתו, מה ישתנה אצלו.')} aside=${aside}>
     <div class="flex flex-col gap-3" role="radiogroup" aria-label="התוצאה">
       ${options.map((opt) => {
         const on = o.id === opt.id;
@@ -84,30 +84,38 @@ export function ProblemsScreen({ s, set, aside, onAdd, adding }) {
   <//>`;
 }
 
-// ---------- part 3a: the 2×2, what stays in the offer ----------
-// Top row stays in (worth a lot to the client), bottom row goes out. Cheap for you on the right (RTL).
-const QUADS = [
-  { cost: 'low', value: 'high', title: 'זול לך, שווה לו הרבה', keep: true },
-  { cost: 'high', value: 'high', title: 'יקר לך, שווה לו הרבה', keep: true },
-  { cost: 'low', value: 'low', title: 'זול לך, שווה לו מעט' },
-  { cost: 'high', value: 'low', title: 'יקר לך, שווה לו מעט' },
-];
+// ---------- part 3a: what goes into the offer ----------
+// Everything the user could give, in two lists: in the offer / left out. The shark's first cut
+// keeps what is worth a lot to the client (the 2×2 of the method: worth to him × cost to you).
+// Each card shows both axes as tags, and the client sentence it answers. A tap moves it across.
+function IdeaCard({ d, s, onFlip }) {
+  const solves = (d.solves || []).map((id) => s.problems.find((p) => p.id === id && p.on)).filter(Boolean)[0];
+  return html`<button type="button" role="switch" aria-checked=${d.in} onClick=${onFlip} class=${cx('rise group flex w-full items-start gap-3 rounded-2xl p-3.5 text-start transition cursor-pointer', d.in ? 'bg-white shadow-sm ring-1 ring-line hover:ring-brand-300' : 'border-[1.5px] border-dashed border-line bg-white/60 hover:bg-white')}>
+    <span class=${cx('mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full transition', d.in ? 'bg-brand-600 text-white' : 'bg-canvas text-muted ring-1 ring-line group-hover:text-brand-600')}><${Icon} name=${d.in ? 'check' : 'plus'} size=${14} /></span>
+    <span class="min-w-0 flex-1">
+      <b class=${cx('block text-[15px] leading-snug', d.in ? 'text-ink' : 'text-muted')}>${d.text}</b>
+      ${d.in && solves ? html`<span class="mt-1 block truncate text-[13px] text-muted">עונה על: “${solves.text}”</span>` : !d.in && d.why ? html`<span class="mt-1 block text-[13px] text-muted">${d.why}</span>` : null}
+      <span class="mt-2 flex flex-wrap gap-1.5">
+        <span class=${cx('rounded-full px-2 py-0.5 text-[12px] font-bold', d.value === 'high' ? 'bg-money-50 text-money' : 'bg-canvas text-muted ring-1 ring-line')}>${d.value === 'high' ? 'שווה לו הרבה' : 'שווה לו מעט'}</span>
+        <span class="rounded-full bg-canvas px-2 py-0.5 text-[12px] font-bold text-muted ring-1 ring-line">${d.cost === 'low' ? 'קל לך לתת' : 'דורש ממך הרבה'}</span>
+        ${d.win && html`<span class="inline-flex items-center gap-1 rounded-full bg-gold/25 px-2 py-0.5 text-[12px] font-bold text-ink"><${Icon} name="zap" size=${12} />ניצחון ראשון</span>`}
+      </span>
+    </span>
+    <span class="mt-0.5 hidden shrink-0 text-[13px] font-bold text-brand-600 group-hover:inline">${d.in ? 'להוציא' : 'להכניס'}</span>
+  </button>`;
+}
 export function MatrixScreen({ s, set, aside }) {
   const flip = (id) => set((x) => ({ ...x, ideas: x.ideas.map((d) => (d.id === id ? { ...d, in: !d.in } : d)) }));
-  return html`<${Screen} title=${['מה ', 'נכנס', ' להצעה?']} sub="הכריש מיין את מה שאפשר לתת. למעלה בפנים, למטה בחוץ. לחיצה מזיזה." aside=${aside}>
-    <div class="grid gap-3 md:grid-cols-2">
-      ${QUADS.map((q) => {
-        const items = s.ideas.filter((d) => d.cost === q.cost && d.value === q.value);
-        return html`<section key=${q.title} class=${cx('rounded-2xl p-3', q.keep ? 'bg-brand-50 ring-1 ring-brand-200' : 'bg-canvas ring-1 ring-line')}>
-          <p class=${cx('mb-2 flex items-center gap-1.5 text-[13px] font-bold', q.keep ? 'text-brand-600' : 'text-muted')}><${Icon} name=${q.keep ? 'circle-check' : 'circle-minus'} size=${14} />${q.title}</p>
-          <div class="flex flex-col gap-1.5">
-            ${items.map((d) => html`<button key=${d.id} type="button" role="switch" aria-checked=${d.in} onClick=${() => flip(d.id)} title=${d.in ? 'להוציא' : 'להכניס'} class=${cx('flex items-center gap-2 rounded-xl px-3 py-2.5 text-start text-[15px] font-semibold leading-snug transition cursor-pointer', d.in ? 'bg-white text-ink shadow-sm ring-1 ring-line hover:ring-brand-300' : 'text-faint line-through decoration-faint hover:bg-white/60')}>
-              <span class="min-w-0 flex-1">${d.text}</span>
-              ${d.win && d.in && html`<span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-gold/25 px-2 py-0.5 text-[12px] font-bold text-ink no-underline"><${Icon} name="zap" size=${12} />ניצחון ראשון</span>`}
-            </button>`)}
-          </div>
-        </section>`;
-      })}
+  const inn = s.ideas.filter((d) => d.in);
+  const out = s.ideas.filter((d) => !d.in);
+  const col = (list, head, icon, tone, empty) => html`<section class=${cx('rounded-3xl p-3 md:p-4', tone)}>
+    <p class="mb-3 flex items-center gap-2 px-1 font-display text-[16px] font-black"><${Icon} name=${icon} size=${18} />${head}<span class="rounded-full bg-white px-2 py-0.5 text-[13px] tabular-nums ring-1 ring-line">${list.length}</span></p>
+    <div class="flex flex-col gap-2">${list.length ? list.map((d) => html`<${IdeaCard} key=${d.id} d=${d} s=${s} onFlip=${() => flip(d.id)} />`) : html`<p class="px-1 py-4 text-center text-[14px] text-muted">${empty}</p>`}</div>
+  </section>`;
+  return html`<${Screen} title=${['מה ', 'נכנס', ' להצעה?']} sub="אלה כל הדברים שאפשר לתת ללקוח. הכריש השאיר בפנים רק מה ששווה לו הרבה. לחיצה על כרטיס מעבירה אותו לצד השני." aside=${aside}>
+    <div class="grid items-start gap-3 md:grid-cols-[3fr_2fr]">
+      ${col(inn, 'בפנים ההצעה', 'circle-check', 'bg-brand-50 text-brand-600 ring-1 ring-brand-200', 'עוד לא נכנס כלום')}
+      ${col(out, 'נשאר בחוץ', 'circle-minus', 'bg-canvas text-muted ring-1 ring-line', 'הכול בפנים')}
     </div>
   <//>`;
 }

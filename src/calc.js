@@ -116,7 +116,7 @@ export function checks(s) {
   const forYou = s.ideas.filter((d) => d.in && d.mode === 'בשבילך');
   const named = activeComps(s).filter((c) => c.name?.trim());
   const urgent = s.urgency.id !== 'none';
-  const noDate = s.urgency.id === 'cohort' && !s.urgency.date;
+  const noDate = (s.urgency.id === 'cohort' || s.urgency.id === 'price') && !s.urgency.date;
   const hasBasketSeq = BASKET.some((p) => p.role === 'recurring') && BASKET.some((p) => p.role === 'bridge');
   return [
     { id: 'audience', q: 'ברור למי ההצעה, והקהל עומד בארבעת התנאים?', state: 'ok', note: `${USER.audience}. ארבעת התנאים סומנו בצייד הלקוחות.` },
@@ -127,7 +127,7 @@ export function checks(s) {
     { id: 'unique', q: 'אי אפשר להשוות את ההצעה לשל מתחרה, שורה מול שורה?', state: named.length >= 3 && guaranteeOK(s.guarantee) ? 'ok' : 'todo', note: named.length >= 3 ? `${named.length} רכיבים עם שם שמבטיח תוצאה${guaranteeOK(s.guarantee) ? ', והבטחה' : ''}. אין "12 פגישות" להשוות.` : 'פחות משלושה רכיבים עם שם.', screen: 'components' },
     { id: 'value', q: 'הערך הכולל, עם ערכים מוסברים, גדול בהרבה מהמחיר?', state: r >= 2 && !unexplained(s).length ? 'ok' : 'todo', note: `${fmt(total(s))} מול ${fmt(s.price)}: ${fmtRatio(r)}.${unexplained(s).length ? ` ל-${unexplained(s).length} ערכים אין עדיין הסבר.` : ''}`, screen: r < 2 ? 'value' : 'components' },
     { id: 'guarantee', q: 'יש הבטחה במבנה "אם לא X תוך Y, אנחנו Z"?', state: guaranteeOK(s.guarantee) ? 'ok' : 'todo', note: guaranteeOK(s.guarantee) ? `"${s.guarantee.name}": ${guaranteeLine(s.guarantee)}` : 'חסר חלק במשפט, או שעוד אין הבטחה.', screen: 'guarantee' },
-    { id: 'scarcity', q: 'המחסור והדחיפות אמיתיים, ואפשר להסביר אותם?', state: !urgent ? 'na' : noDate ? 'todo' : 'ok', note: !urgent ? 'לא בשימוש, וזה בסדר.' : noDate ? 'חסר תאריך אמיתי.' : s.urgency.id === 'seats' ? 'לפי הקיבולת האמיתית שלך.' : 'לפי התאריך שקבעת.', screen: 'urgency' },
+    { id: 'scarcity', q: 'המחסור והדחיפות אמיתיים, ואפשר להסביר אותם?', state: !urgent ? 'na' : noDate ? 'todo' : 'ok', note: !urgent ? 'לא בשימוש, וזה בסדר.' : noDate ? 'חסר תאריך אמיתי.' : s.urgency.id === 'seats' ? 'לפי הקיבולת האמיתית שלך.' : s.urgency.id === 'price' ? 'המחיר באמת עולה בתאריך שקבעת.' : 'לפי התאריך שקבעת.', screen: 'urgency' },
     { id: 'sequence', q: 'יש הצעה למה שבא אחרי, ולמי שאומר לא?', state: hasBasketSeq ? 'ok' : 'todo', note: 'בסל: ריטיינר אחרי התוכנית, וסדנה למי שאומר לא. בסיום יש גם "המינימום".' },
   ];
 }

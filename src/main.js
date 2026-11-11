@@ -257,7 +257,7 @@ function App({ view: shellView, onViewChange }) {
     matrix: !s.ideas.some((d) => d.in) ? 'צריך להשאיר משהו בהצעה' : null,
     value: !(s.price > 0) ? 'חסר מחיר' : null,
     guarantee: !guaranteeOK(s.guarantee) ? 'חסר חלק במשפט ההבטחה' : null,
-    urgency: s.urgency.id === 'cohort' && !s.urgency.date ? 'חסר תאריך' : null,
+    urgency: (s.urgency.id === 'cohort' || s.urgency.id === 'price') && !s.urgency.date ? 'חסר תאריך' : null,
     name: !s.name.text?.trim() ? 'בוחרים שם' : null,
   }[screen];
   const hint = inFlow ? `חלק ${part + 1} מתוך ${PARTS.length}` : null;
