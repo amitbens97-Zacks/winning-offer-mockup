@@ -12,7 +12,7 @@ export function Opening({ onReview }) {
     <div>
       <p class="fb-eyebrow mb-2">שלב 8 · בניית מותג אישי</p>
       <h1 class="fb-h1 mb-3 text-[34px] leading-[1.1] md:text-[46px]">הצעה <span class="fb-marker">שקשה לסרב לה</span></h1>
-      <p class="mb-6 max-w-[40ch] text-[18px] text-ink-2">בונים הצעה כל כך טובה, שהלקוח ירגיש טיפש להגיד לא.</p>
+      <p class="mb-6 max-w-[40ch] text-[18px] text-ink-2">בונים הצעה כל כך טובה, שהלקוח ירגיש טיפש אם הוא לא לוקח אותה.</p>
       <button type="button" onClick=${onReview} class="inline-flex items-center gap-2 text-[15px] font-bold text-brand-600 hover:underline cursor-pointer"><${Icon} name="file-search" size=${17} />יש לי כבר הצעה. לבדוק אותה קודם</button>
     </div>
     <${Scale} />

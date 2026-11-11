@@ -87,34 +87,51 @@ export function ProblemsScreen({ s, set, aside, onAdd, adding }) {
 // ---------- part 3a: what goes into the offer ----------
 // Everything the user could give, in two lists: in the offer / left out. The shark's first cut
 // keeps what is worth a lot to the client (the 2×2 of the method: worth to him × cost to you).
-// Each card shows both axes as tags, and the client sentence it answers. A tap moves it across.
-function IdeaCard({ d, s, onFlip }) {
+// Each list is sorted by importance: worth a lot first, then easy to give, then first win.
+// The text and both tags can be edited, the user can add items, and a tap on the circle moves one across.
+const weight = (d) => (d.value === 'high' ? 4 : 0) + (d.cost === 'low' ? 2 : 0) + (d.win ? 1 : 0);
+const byWeight = (a, b) => weight(b) - weight(a);
+function IdeaCard({ d, s, onFlip, onEdit, onRemove }) {
   const solves = (d.solves || []).map((id) => s.problems.find((p) => p.id === id && p.on)).filter(Boolean)[0];
-  return html`<button type="button" role="switch" aria-checked=${d.in} onClick=${onFlip} class=${cx('rise group flex w-full items-start gap-3 rounded-2xl p-3.5 text-start transition cursor-pointer', d.in ? 'bg-white shadow-sm ring-1 ring-line hover:ring-brand-300' : 'border-[1.5px] border-dashed border-line bg-white/60 hover:bg-white')}>
-    <span class=${cx('mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full transition', d.in ? 'bg-brand-600 text-white' : 'bg-canvas text-muted ring-1 ring-line group-hover:text-brand-600')}><${Icon} name=${d.in ? 'check' : 'plus'} size=${14} /></span>
-    <span class="min-w-0 flex-1">
-      <b class=${cx('block text-[15px] leading-snug', d.in ? 'text-ink' : 'text-muted')}>${d.text}</b>
+  const tag = 'rounded-full px-2 py-0.5 text-[12px] font-bold transition cursor-pointer hover:ring-brand-300';
+  return html`<div class=${cx('rise group flex items-start gap-3 rounded-2xl p-3.5 transition', d.in ? 'bg-white shadow-sm ring-1 ring-line' : 'border-[1.5px] border-dashed border-line bg-white/60')}>
+    <button type="button" role="switch" aria-checked=${d.in} onClick=${onFlip} title=${d.in ? 'להוציא מההצעה' : 'להכניס להצעה'} aria-label=${d.in ? 'להוציא מההצעה' : 'להכניס להצעה'} class=${cx('mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full transition cursor-pointer', d.in ? 'bg-brand-600 text-white hover:bg-error' : 'bg-canvas text-muted ring-1 ring-line hover:bg-brand-600 hover:text-white')}>
+      <${Icon} name=${d.in ? 'check' : 'plus'} size=${15} class=${d.in ? 'group-hover:hidden' : ''} />${d.in && html`<${Icon} name="minus" size=${15} class="hidden group-hover:block" />`}
+    </button>
+    <div class="min-w-0 flex-1">
+      <b class=${cx('block text-[15px] leading-snug', d.in ? 'text-ink' : 'text-muted')}><${InlineEdit} value=${d.text} placeholder="מה נותנים" onSave=${(v) => (v.trim() ? onEdit({ text: v.trim() }) : onRemove?.())} class="!whitespace-normal" /></b>
       ${d.in && solves ? html`<span class="mt-1 block truncate text-[13px] text-muted">עונה על: “${solves.text}”</span>` : !d.in && d.why ? html`<span class="mt-1 block text-[13px] text-muted">${d.why}</span>` : null}
       <span class="mt-2 flex flex-wrap gap-1.5">
-        <span class=${cx('rounded-full px-2 py-0.5 text-[12px] font-bold', d.value === 'high' ? 'bg-money-50 text-money' : 'bg-canvas text-muted ring-1 ring-line')}>${d.value === 'high' ? 'שווה לו הרבה' : 'שווה לו מעט'}</span>
-        <span class="rounded-full bg-canvas px-2 py-0.5 text-[12px] font-bold text-muted ring-1 ring-line">${d.cost === 'low' ? 'קל לך לתת' : 'דורש ממך הרבה'}</span>
-        ${d.win && html`<span class="inline-flex items-center gap-1 rounded-full bg-gold/25 px-2 py-0.5 text-[12px] font-bold text-ink"><${Icon} name="zap" size=${12} />ניצחון ראשון</span>`}
+        <button type="button" title="לשנות" onClick=${() => onEdit({ value: d.value === 'high' ? 'low' : 'high' })} class=${cx(tag, d.value === 'high' ? 'bg-money-50 text-money ring-1 ring-money/20' : 'bg-canvas text-muted ring-1 ring-line')}>${d.value === 'high' ? 'שווה לו הרבה' : 'שווה לו מעט'}</button>
+        <button type="button" title="לשנות" onClick=${() => onEdit({ cost: d.cost === 'low' ? 'high' : 'low' })} class=${cx(tag, d.cost === 'low' ? 'bg-brand-50 text-brand-600 ring-1 ring-brand-200' : 'bg-canvas text-muted ring-1 ring-line')}>${d.cost === 'low' ? 'קל לך לתת' : 'דורש ממך הרבה'}</button>
+        <button type="button" title=${d.win ? 'להוריד' : 'לסמן כניצחון ראשון'} onClick=${() => onEdit({ win: !d.win })} class=${cx(tag, 'items-center gap-1', d.win ? 'inline-flex bg-gold/25 text-ink ring-1 ring-gold/40' : 'hidden border border-dashed border-line text-faint md:group-hover:inline-flex')}><${Icon} name="zap" size=${12} />ניצחון ראשון</button>
       </span>
-    </span>
-    <span class="mt-0.5 hidden shrink-0 text-[13px] font-bold text-brand-600 group-hover:inline">${d.in ? 'להוציא' : 'להכניס'}</span>
-  </button>`;
+    </div>
+    ${onRemove && html`<button type="button" onClick=${onRemove} title="למחוק" aria-label="למחוק" class="mt-0.5 shrink-0 rounded-md p-1 text-muted hover:bg-canvas hover:text-error md:hidden md:group-hover:block cursor-pointer"><${Icon} name="trash-2" size=${15} /></button>`}
+  </div>`;
+}
+function AddIdea({ onAdd }) {
+  const [v, setV] = useState('');
+  const add = () => v.trim() && (onAdd(v.trim()), setV(''));
+  return html`<form class="mt-1 flex items-center gap-2" onSubmit=${(e) => (e.preventDefault(), add())}>
+    <input class=${cx(inputCls, '!h-11 flex-1 bg-white')} placeholder="עוד משהו שאפשר לתת..." value=${v} onInput=${(e) => setV(e.target.value)} aria-label="פריט חדש להצעה" />
+    <${Button} variant="secondary" type="submit" disabled=${!v.trim()}><${Icon} name="plus" size=${16} />להוסיף<//>
+  </form>`;
 }
 export function MatrixScreen({ s, set, aside }) {
-  const flip = (id) => set((x) => ({ ...x, ideas: x.ideas.map((d) => (d.id === id ? { ...d, in: !d.in } : d)) }));
-  const inn = s.ideas.filter((d) => d.in);
-  const out = s.ideas.filter((d) => !d.in);
-  const col = (list, head, icon, tone, empty) => html`<section class=${cx('rounded-3xl p-3 md:p-4', tone)}>
+  const edit = (id, p) => set((x) => ({ ...x, ideas: x.ideas.map((d) => (d.id === id ? { ...d, ...p } : d)) }));
+  const remove = (id) => set((x) => ({ ...x, ideas: x.ideas.filter((d) => d.id !== id) }));
+  const add = (text) => set((x) => ({ ...x, ideas: [...x.ideas, { id: `u${Date.now()}`, text, solves: [], cost: 'low', value: 'high', in: true, own: true }] }));
+  const inn = s.ideas.filter((d) => d.in).sort(byWeight);
+  const out = s.ideas.filter((d) => !d.in).sort(byWeight);
+  const card = (d) => html`<${IdeaCard} key=${d.id} d=${d} s=${s} onFlip=${() => edit(d.id, { in: !d.in })} onEdit=${(p) => edit(d.id, p)} onRemove=${d.own ? () => remove(d.id) : null} />`;
+  const col = (list, head, icon, tone, empty, foot) => html`<section class=${cx('rounded-3xl p-3 md:p-4', tone)}>
     <p class="mb-3 flex items-center gap-2 px-1 font-display text-[16px] font-black"><${Icon} name=${icon} size=${18} />${head}<span class="rounded-full bg-white px-2 py-0.5 text-[13px] tabular-nums ring-1 ring-line">${list.length}</span></p>
-    <div class="flex flex-col gap-2">${list.length ? list.map((d) => html`<${IdeaCard} key=${d.id} d=${d} s=${s} onFlip=${() => flip(d.id)} />`) : html`<p class="px-1 py-4 text-center text-[14px] text-muted">${empty}</p>`}</div>
+    <div class="flex flex-col gap-2">${list.length ? list.map(card) : html`<p class="px-1 py-4 text-center text-[14px] text-muted">${empty}</p>`}${foot}</div>
   </section>`;
-  return html`<${Screen} title=${['מה ', 'נכנס', ' להצעה?']} sub="אלה כל הדברים שאפשר לתת ללקוח. הכריש השאיר בפנים רק מה ששווה לו הרבה. לחיצה על כרטיס מעבירה אותו לצד השני." aside=${aside}>
+  return html`<${Screen} title=${['מה ', 'נכנס', ' להצעה?']} sub="אלה כל הדברים שאפשר לתת ללקוח, מהחשוב ביותר ומטה. העיגול מעביר לצד השני, ואפשר לערוך כל טקסט ותגית או להוסיף משלך." aside=${aside}>
     <div class="grid items-start gap-3 md:grid-cols-[3fr_2fr]">
-      ${col(inn, 'בפנים ההצעה', 'circle-check', 'bg-brand-50 text-brand-600 ring-1 ring-brand-200', 'עוד לא נכנס כלום')}
+      ${col(inn, 'בפנים ההצעה', 'circle-check', 'bg-brand-50 text-brand-600 ring-1 ring-brand-200', 'עוד לא נכנס כלום', html`<${AddIdea} onAdd=${add} />`)}
       ${col(out, 'נשאר בחוץ', 'circle-minus', 'bg-canvas text-muted ring-1 ring-line', 'הכול בפנים')}
     </div>
   <//>`;

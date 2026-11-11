@@ -77,7 +77,7 @@ async function ask({ task, schema, effort = 'low', maxTokens = 6000 }) {
     // The prompt is the same in every call, so it is cached; the task follows it.
     system: [
       { type: 'text', text: prompt, cache_control: { type: 'ephemeral' } },
-      { type: 'text', text: 'אתה עובד בתוך שלב "בניית הצעה מנצחת" במערכת FlowBiz, לא בצ\'אט. כל קריאה היא משימה אחת של מצב הבנייה, והתשובה שלך היא JSON בלבד שהמסך מציג כטיוטה. בעל העסק מאשר או עורך. אל תשאל שאלות. על הלקוח של בעל העסק כותבים תמיד בגוף שלישי (הוא), גם בתוצאה, בהבטחה ובבונוסים. לא "אתה".' },
+      { type: 'text', text: 'אתה עובד בתוך שלב "בניית הצעה מנצחת" במערכת FlowBiz, לא בצ\'אט. כל קריאה היא משימה אחת של מצב הבנייה, והתשובה שלך היא JSON בלבד שהמסך מציג כטיוטה. בעל העסק מאשר או עורך. אל תשאל שאלות. על הלקוח של בעל העסק כותבים בגוף שלישי (הוא), בתוצאה ובבונוסים. יוצא מן הכלל: משפטי ההבטחה נאמרים ללקוח, ולכן פונים בהם אליו ישירות ("אתה", "נחזיר לך").' },
     ],
     messages: [{ role: 'user', content: task }],
     output_config: { effort, format: { type: 'json_schema', schema } },
