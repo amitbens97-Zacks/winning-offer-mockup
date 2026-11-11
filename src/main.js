@@ -244,7 +244,7 @@ function App({ view: shellView, onViewChange }) {
   const inFlow = part != null;
   const devBtn = html`<button type="button" onClick=${() => setDev((d) => !d)} title="הערות למפתחים (Shift+D)" aria-label="הערות למפתחים" class="inline-flex h-10 w-10 items-center justify-center rounded-xl text-muted hover:bg-brand-50 hover:text-brand-600 cursor-pointer max-md:hidden"><${Icon} name="code-xml" size=${18} /></button>`;
   // Below xl the offer card has no room beside the screen; it opens from the top bar.
-  const cardBtn = inFlow && html`<button type="button" onClick=${() => setCardOpen(true)} aria-label="ההצעה שלך" title="ההצעה שלך" class="inline-flex h-10 items-center gap-1.5 rounded-xl px-3 text-[14px] font-bold text-brand-600 ring-1 ring-brand-200 hover:bg-brand-50 cursor-pointer xl:hidden"><${Icon} name="file-text" size=${16} /><span class="max-sm:hidden">ההצעה שלך</span></button>`;
+  const cardBtn = inFlow && html`<button type="button" onClick=${() => setCardOpen(true)} aria-label="ההצעה שלך" title="ההצעה שלך" class="inline-flex h-10 w-10 items-center justify-center rounded-xl text-brand-600 ring-1 ring-brand-200 hover:bg-brand-50 cursor-pointer xl:hidden"><${Icon} name="file-text" size=${18} /></button>`;
   const top = html`<${TopBar}
     step=${STEP}
     progress=${inFlow ? html`<${Progress} parts=${PARTS} current=${part} maxReached=${s.reached} onJump=${(i) => i <= s.reached && go(FIRST_OF_PART[i])} />` : screen === 'done' ? html`<${Progress} parts=${PARTS} current=${PARTS.length - 1} maxReached=${PARTS.length - 1} done onJump=${(i) => go(FIRST_OF_PART[i])} />` : null}
