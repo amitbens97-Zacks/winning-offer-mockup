@@ -97,7 +97,7 @@ export function MoneyEdit({ value, onSave, class: cls = '', big }) {
       if (e.key === 'Enter') (e.preventDefault(), e.stopPropagation(), done());
       if (e.key === 'Escape') (setV(value), setEdit(false));
     }} class=${cx('w-28 rounded-lg border-[1.5px] border-brand-600 bg-white px-2 py-1 text-end font-display font-bold tabular-nums outline-none ring-4 ring-brand-100', big ? 'text-[24px]' : 'text-[16px]')} aria-label="סכום" />`;
-  return html`<button type="button" title="לעריכה" onClick=${() => (setV(value ?? ''), setEdit(true))} class=${cx('rounded-md px-1 font-display font-bold tabular-nums decoration-brand-300 decoration-dashed underline-offset-4 hover:bg-brand-50 hover:underline cursor-text', big ? 'text-[24px]' : 'text-[16px]', cls)}>${value == null ? html`<span class="text-faint">סכום</span>` : fmt(value)}</button>`;
+  return html`<button type="button" title="לעריכה" onClick=${() => (setV(value ?? ''), setEdit(true))} class=${cx('whitespace-nowrap rounded-md px-1 font-display font-bold tabular-nums decoration-brand-300 decoration-dashed underline-offset-4 hover:bg-brand-50 hover:underline cursor-text', big ? 'text-[24px]' : 'text-[16px]', cls)}>${value == null ? html`<span class="text-faint">סכום</span>` : fmt(value)}</button>`;
 }
 
 // "איך זה חושב": a folded explanation next to a number.
@@ -112,4 +112,25 @@ export function StateIcon({ state }) {
   if (state === 'ok') return html`<span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand-100"><${PencilCheck} size=${17} color="#0038b8" weight=${3} /></span>`;
   if (state === 'todo') return html`<span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-warn-50 text-warn"><${Icon} name="circle-dot" size=${15} /></span>`;
   return html`<span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-canvas text-faint ring-1 ring-line"><${Icon} name="minus" size=${15} /></span>`;
+}
+
+// The big "what you get vs what you pay" card on the price screen: two numbers, the ratio
+// between them, and two bars that move as bonuses go on and off.
+export function ValueMeter({ value, price, priceSlot, foot }) {
+  const r = price > 0 ? value / price : 0;
+  const t = TONE[ratioTone(r)];
+  const max = Math.max(value, price, 1);
+  return html`<div class="fb-panel !p-4 md:!p-5">
+    <div class="flex items-end justify-between gap-3">
+      <div><p class="text-[13px] font-bold text-muted">מה מקבלים</p><b class="whitespace-nowrap font-display text-[24px] font-black tabular-nums text-money md:text-[32px]">${fmt(value)}</b></div>
+      <span class=${cx('mb-1.5 whitespace-nowrap rounded-full px-2.5 py-1 font-display text-[15px] font-black md:px-3 md:text-[17px] tabular-nums transition-colors', r >= 2 ? 'bg-money-50' : r >= 1.5 ? 'bg-warn-50' : 'bg-error-50', t.text)}>${fmtRatio(r)}</span>
+      <div class="whitespace-nowrap text-end"><p class="text-[13px] font-bold text-muted">מה משלמים</p>${priceSlot}</div>
+    </div>
+    <div class="mt-3 flex flex-col gap-1.5">
+      <span class="h-3 overflow-hidden rounded-full bg-canvas ring-1 ring-line"><span class=${cx('block h-full rounded-full transition-all duration-500', t.bar)} style=${{ width: `${(value / max) * 100}%` }}></span></span>
+      <span class="h-3 overflow-hidden rounded-full bg-canvas ring-1 ring-line"><span class="block h-full rounded-full bg-ink/70 transition-all duration-500" style=${{ width: `${(price / max) * 100}%` }}></span></span>
+    </div>
+    <p class=${cx('mt-2 text-[14px] font-bold', t.text)}>${t.label}</p>
+    ${foot}
+  </div>`;
 }

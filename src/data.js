@@ -12,7 +12,7 @@
 export const PARTNER = { name: 'הכריש', role: 'השותף העסקי' };
 
 export const STEP = { n: 8, name: 'בניית הצעה מנצחת', chapterNo: 3, chapter: 'בניית מותג אישי', icon: 'gift' };
-export const PARTS = ['התוצאה', 'מה עוצר', 'מה כלול', 'מחיר ובונוסים', 'הבטחה', 'שם ובדיקה'];
+export const PARTS = ['התוצאה', 'מה עוצר', 'מה כלול', 'המחיר', 'הבטחה', 'שם'];
 
 // ---------- who the user is (?user=f or ?user=m, or the developer panel) ----------
 const PROFILES = {
@@ -258,11 +258,11 @@ export const GUARANTEE_DRAFTS = {
 };
 export const CANCEL_TEXT = 'אפשר לבטל תוך 14 יום מהעסקה, לפי חוק הגנת הצרכן. דמי ביטול: 5% מהמחיר או 100 ₪, הנמוך מביניהם.';
 
+// "seats" uses the real capacity from "העסק במספרים"; "cohort" needs a real date.
 export const URGENCY = [
   { id: 'none', label: 'בלי דחיפות', sub: 'ההצעה זמינה תמיד', icon: 'circle-off' },
-  { id: 'cohort', label: 'תאריך התחלה', sub: 'מי שנרשם עד התאריך מתחיל במחזור הקרוב', icon: 'calendar-days' },
-  { id: 'bonus', label: 'בונוס עד תאריך', sub: 'השירות זמין תמיד, הבונוס נגמר', icon: 'gift' },
-  { id: 'price', label: 'המחיר עולה', sub: 'רק אם הוא באמת עולה בתאריך הזה', icon: 'trending-up' },
+  { id: 'seats', label: 'מקומות מוגבלים', sub: '', icon: 'users' },
+  { id: 'cohort', label: 'תאריך התחלה', sub: 'מתחילים יחד, במחזור הקרוב', icon: 'calendar-days' },
 ];
 
 // ---------- part 6: the name ----------

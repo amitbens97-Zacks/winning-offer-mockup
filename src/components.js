@@ -157,7 +157,7 @@ export function Status({ undo, onUndo, reason, save, hint }) {
   if (save === 'saving') return html`<span class="fb-status" role="status"><span class="fb-spin"></span>שומר...</span>`;
   if (save === 'failed') return html`<span class="fb-status is-failed" role="status">לא נשמר, מנסים שוב</span>`;
   if (save === 'saved') return html`<span class="fb-status is-saved" role="status"><${PencilCheck} size=${16} color="#0038b8" weight=${3} />נשמר</span>`;
-  if (hint) return html`<span class="fb-status" role="status">${hint}</span>`;
+  if (hint) return html`<span class="fb-status fb-hint" role="status">${hint}</span>`;
   return html`<span></span>`;
 }
 
@@ -168,10 +168,11 @@ export function BottomBar({ back, extra, status, primary }) {
       <div class="justify-self-center">${status}</div>
       <div class="justify-self-end">${primary}</div>
     </div>
-    <div class="flex flex-col gap-2 px-4 pt-3 md:hidden">
-      <div class="flex min-h-6 justify-center text-center">${status}</div>
-      <div class="[&>button]:w-full">${primary}</div>
-      <div class="flex items-center justify-center gap-4">${back}${extra}</div>
+    <!-- Phone: one row, back beside the primary. The progress bar on top already says which part, so the hint hides when there is a back button. -->
+    <div class="flex flex-col gap-2 px-4 py-3 md:hidden">
+      <div class=${'flex justify-center text-center empty:hidden' + (back ? ' [&_.fb-hint]:hidden [&:not(:has(.fb-status:not(.fb-hint)))]:hidden' : '')}>${status}</div>
+      ${extra && html`<div class="flex justify-center">${extra}</div>`}
+      <div class="flex items-center gap-2">${back}<div class="min-w-0 flex-1 [&>span]:block [&_button]:w-full">${primary}</div></div>
     </div>
   </div>`;
 }

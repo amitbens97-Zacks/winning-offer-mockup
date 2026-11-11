@@ -57,11 +57,12 @@ export function openObstacles(s, withBonuses = false) {
 }
 
 // The shark's bonuses: one for each open obstacle, from the basket first, tools before lessons.
-export function draftBonuses(s) {
+// They arrive switched off, so the user switches them on and sees the meter move.
+export function draftBonuses(s, on = false) {
   return openObstacles(s).map((p) => {
     const d = BONUS_DRAFTS[p.id];
     return d
-      ? { id: `b-${p.id}`, for: p.id, on: true, byShark: true, ...d }
+      ? { id: `b-${p.id}`, for: p.id, on, byShark: true, ...d }
       : { id: `b-${p.id}`, for: p.id, on: false, byShark: true, empty: true, name: '', what: '', kind: 'כלי', value: null, basis: 'separate', note: '' };
   });
 }
@@ -114,7 +115,8 @@ export function checks(s) {
   const win = s.ideas.some((d) => d.in && d.win);
   const forYou = s.ideas.filter((d) => d.in && d.mode === 'בשבילך');
   const named = activeComps(s).filter((c) => c.name?.trim());
-  const urgent = s.urgency.id !== 'none' || s.seats.on;
+  const urgent = s.urgency.id !== 'none';
+  const noDate = s.urgency.id === 'cohort' && !s.urgency.date;
   const hasBasketSeq = BASKET.some((p) => p.role === 'recurring') && BASKET.some((p) => p.role === 'bridge');
   return [
     { id: 'audience', q: 'ברור למי ההצעה, והקהל עומד בארבעת התנאים?', state: 'ok', note: `${USER.audience}. ארבעת התנאים סומנו בצייד הלקוחות.` },
@@ -123,9 +125,9 @@ export function checks(s) {
     { id: 'win', q: 'יש ניצחון ראשון מהיר, והלקוח רואה את ההתקדמות?', state: win ? 'ok' : 'todo', note: win ? 'מודעה ראשונה באוויר בתוך 10 ימים, ודוח של שורה אחת בכל שבוע.' : 'אין ניצחון בשבועות הראשונים. אפשר להחזיר את "מודעה ראשונה באוויר".', screen: 'matrix' },
     { id: 'effort', q: 'ברור מה יורד מהלקוח, ומה אנחנו עושים בשבילו?', state: forYou.length ? 'ok' : 'todo', note: forYou.length ? `${forYou.length} דברים נעשים בשביל הלקוח, למשל ${forYou[0].text.split(',')[0]}.` : 'הכול נשאר על הלקוח.', screen: 'matrix' },
     { id: 'unique', q: 'אי אפשר להשוות את ההצעה לשל מתחרה, שורה מול שורה?', state: named.length >= 3 && guaranteeOK(s.guarantee) ? 'ok' : 'todo', note: named.length >= 3 ? `${named.length} רכיבים עם שם שמבטיח תוצאה${guaranteeOK(s.guarantee) ? ', והבטחה' : ''}. אין "12 פגישות" להשוות.` : 'פחות משלושה רכיבים עם שם.', screen: 'components' },
-    { id: 'value', q: 'הערך הכולל, עם ערכים מוסברים, גדול בהרבה מהמחיר?', state: r >= 2 && !unexplained(s).length ? 'ok' : 'todo', note: `${fmt(total(s))} מול ${fmt(s.price)}: ${fmtRatio(r)}.${unexplained(s).length ? ` ל-${unexplained(s).length} ערכים אין עדיין הסבר.` : ''}`, screen: r < 2 ? 'bonuses' : 'components' },
+    { id: 'value', q: 'הערך הכולל, עם ערכים מוסברים, גדול בהרבה מהמחיר?', state: r >= 2 && !unexplained(s).length ? 'ok' : 'todo', note: `${fmt(total(s))} מול ${fmt(s.price)}: ${fmtRatio(r)}.${unexplained(s).length ? ` ל-${unexplained(s).length} ערכים אין עדיין הסבר.` : ''}`, screen: r < 2 ? 'value' : 'components' },
     { id: 'guarantee', q: 'יש הבטחה במבנה "אם לא X תוך Y, אנחנו Z"?', state: guaranteeOK(s.guarantee) ? 'ok' : 'todo', note: guaranteeOK(s.guarantee) ? `"${s.guarantee.name}": ${guaranteeLine(s.guarantee)}` : 'חסר חלק במשפט, או שעוד אין הבטחה.', screen: 'guarantee' },
-    { id: 'scarcity', q: 'המחסור והדחיפות אמיתיים, ואפשר להסביר אותם?', state: !urgent ? 'na' : s.urgency.id !== 'none' && !s.urgency.date ? 'todo' : 'ok', note: !urgent ? 'לא בשימוש. הצעה בלי דחיפות עדיפה על דחיפות מזויפת.' : s.urgency.id !== 'none' && !s.urgency.date ? 'חסר תאריך אמיתי.' : 'מבוסס על הקיבולת והתאריך שקבעת.', screen: 'urgency' },
+    { id: 'scarcity', q: 'המחסור והדחיפות אמיתיים, ואפשר להסביר אותם?', state: !urgent ? 'na' : noDate ? 'todo' : 'ok', note: !urgent ? 'לא בשימוש, וזה בסדר.' : noDate ? 'חסר תאריך אמיתי.' : s.urgency.id === 'seats' ? 'לפי הקיבולת האמיתית שלך.' : 'לפי התאריך שקבעת.', screen: 'urgency' },
     { id: 'sequence', q: 'יש הצעה למה שבא אחרי, ולמי שאומר לא?', state: hasBasketSeq ? 'ok' : 'todo', note: 'בסל: ריטיינר אחרי התוכנית, וסדנה למי שאומר לא. בסיום יש גם "המינימום".' },
   ];
 }

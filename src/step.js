@@ -1,65 +1,83 @@
 // Step 8 "בניית הצעה מנצחת": the opening, the check of an offer the user already has,
-// the live offer card beside every screen, and the finish (the offer document, the
-// WhatsApp version, what's missing, the sequence around the offer).
-import { html, useState, useEffect, Icon, cx, confetti, PencilLine } from './lib.js';
-import { Button, Note, StepHeading } from './components.js';
+// the "ההצעה שלך" card beside each screen (done / now / next), and the finish.
+import { html, useState, useEffect, Icon, cx, confetti, PencilLine, PencilCheck } from './lib.js';
+import { Button, Note } from './components.js';
 import { inputCls } from './ui.js';
-import { SharkTip, From, Meter, StateIcon } from './kit.js';
-import { PARTS, CORE, USER, BASKET, EXISTING_OFFER, REVIEW_DIMS, SAVED, g } from './data.js';
-import { activeComps, bonusList, total, fmt, fmtRatio, ratio, payLine, guaranteeLine, guaranteeOK, capacity, minimum, whatsappText, missing } from './calc.js';
+import { CORE, USER, REVIEW_DIMS, SAVED, PARTS, g } from './data.js';
+import { activeComps, activeProblems, bonusList, total, fmt, fmtRatio, ratio, payLine, guaranteeLine, guaranteeOK, capacity, minimum, whatsappText, missing } from './calc.js';
 
-// ---------- opening (first entry only) ----------
+// ---------- opening ----------
 export function Opening({ onReview }) {
-  return html`<div class="mx-auto grid max-w-[1120px] items-center gap-8 px-4 py-6 md:grid-cols-[1.1fr_0.9fr] md:gap-12 md:px-8 md:py-8">
+  return html`<div class="mx-auto grid min-h-full max-w-[1080px] items-center gap-6 px-4 py-8 md:grid-cols-2 md:gap-12 md:px-8">
     <div>
-      <${StepHeading} n="8" eyebrow="שלב 8 · בניית מותג אישי" title=${['הצעה ', 'שקשה לסרב לה', '']} />
-      <p class="mb-5 max-w-[50ch] text-[18px] text-ink">לוקחים את המוצר המרכזי מהסל, ובונים סביבו הצעה: תוצאה ברורה, מענה לכל מה שעוצר את הלקוח, בונוסים והבטחה. בסוף ${g('יש לך', 'יש לך')} מסמך הצעה ממותג וגרסה לוואטסאפ.</p>
-      <div class="mb-5 flex items-center gap-3 rounded-2xl bg-white p-3.5 ring-1 ring-line">
-        <span class="fb-chip-ic h-10 w-10 shrink-0"><${Icon} name="package" size=${20} /></span>
-        <span class="min-w-0 flex-1"><small class="block text-[13px] font-bold text-muted">בונים הצעה ל</small><b class="text-[17px]">${CORE.name} · ${fmt(CORE.price)}</b></span>
-        <${From}>המוצר המרכזי בסל<//>
-      </div>
-      <div class="flex flex-col gap-2 border-t border-line pt-4 text-[15px]">
-        <p class="flex flex-wrap items-center gap-x-2 gap-y-1"><${Icon} name="list" size=${17} class="text-brand-600" /><b>החלקים:</b> ${PARTS.join(' · ')}</p>
-        <p class="flex items-center gap-2"><${Icon} name="clock" size=${17} class="text-brand-600" /><b>זמן:</b> כ-25 דקות</p>
-        <p class="flex items-center gap-2"><${Icon} name="file-check-2" size=${17} class="text-brand-600" /><b>התוצר:</b> מסמך הצעה בעמוד אחד, וגרסה קצרה לוואטסאפ</p>
-        <button type="button" onClick=${onReview} class="mt-1 inline-flex w-fit items-center gap-2 font-bold text-brand-600 hover:underline cursor-pointer"><${Icon} name="file-search" size=${17} />יש לי כבר הצעה. לבדוק אותה קודם</button>
-      </div>
+      <p class="fb-eyebrow mb-2">שלב 8 · בניית מותג אישי</p>
+      <h1 class="fb-h1 mb-3 text-[34px] leading-[1.1] md:text-[46px]">הצעה <span class="fb-marker">שקשה לסרב לה</span></h1>
+      <p class="mb-6 max-w-[40ch] text-[18px] text-ink-2">בונים סביב ${CORE.name} הצעה ששווה ללקוח הרבה יותר ממה שהיא עולה לו.</p>
+      <button type="button" onClick=${onReview} class="inline-flex items-center gap-2 text-[15px] font-bold text-brand-600 hover:underline cursor-pointer"><${Icon} name="file-search" size=${17} />יש לי כבר הצעה. לבדוק אותה קודם</button>
     </div>
-    <div class="relative flex justify-center pb-16" aria-hidden="true">
-      <div class="paper w-[330px] rotate-[1deg] rounded-[18px] p-5">
-        <p class="text-[12px] font-bold text-muted">שיווק שעובד</p>
-        <b class="mb-3 block font-display text-[19px] leading-tight">מכונת הפניות: 90 יום לעסקי שירות</b>
-        ${[['מפת הלקוח', 1500], ['מכונת הפניות', 4000], ['90 יום צמוד', 6900], ['מהפנייה לפגישה', 800]].map(([n, v]) => html`<p key=${n} class="flex justify-between border-b border-dashed border-line py-1.5 text-[14px]"><span>${n}</span><span class="tabular-nums text-muted">${fmt(v)}</span></p>`)}
-        <p class="mt-2 flex justify-between text-[14px]"><span class="text-muted">ערך כולל</span><b class="tabular-nums text-money">15,440 ₪</b></p>
-        <p class="flex justify-between text-[14px]"><span class="text-muted">המחיר</span><b class="tabular-nums">7,500 ₪</b></p>
-      </div>
-      <${Note} tone="white" tilt=${-3} class="absolute bottom-0 left-2 w-[200px] !p-3 text-[14px]">
-        <span class="fb-note-kicker">ההבטחה</span>
-        <span>המפגש הראשון עלינו</span>
-      <//>
-      <span class="hand absolute -top-3 right-2 rotate-[3deg] text-[26px]">פי 2 מהמחיר</span>
-    </div>
+    <${Scale} />
+  </div>`;
+}
+
+// The idea of the step in one picture: what goes on the value side outweighs the price.
+// Blocks drop onto the value pan one by one, then the beam tips.
+function Scale() {
+  const blocks = [
+    { y: 206, w: 92, label: 'התוצאה', d: 0.25 },
+    { y: 178, w: 80, label: 'בונוסים', d: 0.6 },
+    { y: 150, w: 68, label: 'הבטחה', d: 0.95 },
+  ];
+  return html`<div class="relative mx-auto w-full max-w-[470px]" aria-hidden="true">
+    <svg viewBox="0 0 420 320" class="w-full" style="font-family: Rubik, Assistant, sans-serif">
+      <g filter="url(#pencil-rough)" stroke="#2d3e66" stroke-width="3" stroke-linecap="round" fill="none">
+        <path d="M210 70 L210 282" />
+        <path d="M168 288 Q210 274 252 288" />
+        <path d="M150 292 L270 292" />
+      </g>
+      <g class="sc-beam">
+        <path d="M72 70 L348 70" stroke="#0038b8" stroke-width="5" stroke-linecap="round" />
+        <circle cx="210" cy="70" r="9" fill="#fffefb" stroke="#0038b8" stroke-width="3" />
+      </g>
+      <g class="sc-left">
+        <g stroke="#a0a6af" stroke-width="1.6"><path d="M72 70 L34 228" /><path d="M72 70 L110 228" /></g>
+        <path d="M24 228 Q72 254 120 228 Z" fill="#e9effb" stroke="#2d3e66" stroke-width="2.5" filter="url(#pencil-rough)" />
+        <g transform="translate(72 206) rotate(-4)">
+          <rect x="-40" y="-16" width="80" height="30" rx="8" fill="#fffefb" stroke="#2d3e66" stroke-width="2" />
+          <text x="0" y="5" text-anchor="middle" font-size="15" font-weight="800" fill="#2d3e66">${fmt(CORE.price)}</text>
+        </g>
+        <text x="72" y="276" text-anchor="middle" font-size="14" font-weight="700" fill="#5f6775">מה משלמים</text>
+      </g>
+      <g class="sc-right">
+        <g stroke="#a0a6af" stroke-width="1.6"><path d="M348 70 L298 228" /><path d="M348 70 L398 228" /></g>
+        <path d="M288 228 Q348 256 408 228 Z" fill="#e9effb" stroke="#2d3e66" stroke-width="2.5" filter="url(#pencil-rough)" />
+        ${blocks.map((b) => html`<g key=${b.label} class="sc-drop" style=${{ animationDelay: `${b.d}s` }}>
+          <rect x=${348 - b.w / 2} y=${b.y} width=${b.w} height="26" rx="6" fill="#0038b8" />
+          <rect x=${348 - b.w / 2} y=${b.y} width=${b.w} height="26" rx="6" fill="url(#pencil-hatch-light)" />
+          <text x="348" y=${b.y + 18} text-anchor="middle" font-size="14" font-weight="700" fill="#fff">${b.label}</text>
+        </g>`)}
+        <text x="348" y="276" text-anchor="middle" font-size="14" font-weight="700" fill="#5f6775">מה מקבלים</text>
+      </g>
+    </svg>
+    <span class="hand sc-note absolute right-0 -top-3 rotate-[-5deg] text-[32px]">פי 2 מהמחיר!</span>
   </div>`;
 }
 
 // ---------- the check mode: an offer the user already has (prompt mode ב, section 6) ----------
-export function Review({ result, busy, onCheck, text, setText }) {
-  return html`<div class="mx-auto max-w-[780px] px-4 py-6 md:px-8 md:py-8">
-    <h1 class="fb-h1 mb-1.5 text-[26px] md:text-[32px]">מה <span class="fb-marker">עובד</span> בהצעה שלך?</h1>
-    <p class="mb-5 text-[17px] text-muted">${g('הדבק', 'הדביקי')} את ההצעה כמו שהיא היום: ממודעה, מדף נחיתה או מהודעה ללקוח. הכריש נותן ציון, מראה מה הכי חלש, ומשם בונים גרסה משופרת.</p>
+export function Review({ result, busy, text, setText }) {
+  return html`<div class="mx-auto max-w-[720px] px-4 py-6 md:px-8 md:py-10">
+    <h1 class="fb-h1 mb-1.5 text-[28px] md:text-[34px]">מה <span class="fb-marker">עובד</span> בהצעה שלך?</h1>
+    <p class="mb-5 text-[17px] text-muted">${g('הדבק', 'הדביקי')} אותה כמו שהיא היום. הכריש יגיד מה הכי חשוב לשפר.</p>
     ${!result && html`<textarea rows="5" class=${cx(inputCls, '!h-auto py-3 leading-relaxed')} value=${text} onInput=${(e) => setText(e.target.value)} aria-label="ההצעה הקיימת"></textarea>
-      <p class="mt-1.5 text-[13px] text-muted">במוק-אפ: ההצעה של דניאל לפני, לדוגמה. אפשר להחליף.</p>
-      ${busy && html`<p class="mt-4 flex items-center gap-2 text-[15px] font-bold text-brand-600"><span class="fb-spin"></span>הכריש קורא את ההצעה...</p>`}`}
+      ${busy && html`<p class="mt-4 flex items-center gap-2 text-[15px] font-bold text-brand-600"><span class="fb-spin"></span>הכריש קורא...</p>`}`}
     ${result && html`<div class="rise">
-      <div class="fb-panel mb-4 !p-4"><p class="mb-1 text-[13px] font-bold text-muted">ההצעה היום, בעיני הלקוח</p><p class="text-[17px] font-semibold">${result.line}</p></div>
-      <div class="mb-4 rounded-2xl bg-brand-600 p-4 text-white">
-        <p class="text-[13px] font-bold text-brand-200">השיפור האחד הכי משמעותי</p>
-        <b class="block font-display text-[21px]">${result.one.title}</b>
-        <p class="mt-1 text-[15px] text-white/90">${result.one.why}</p>
+      <p class="mb-3 text-[17px] text-ink-2">"${result.line}"</p>
+      <div class="mb-4 rounded-2xl bg-brand-600 p-5 text-white">
+        <p class="text-[13px] font-bold text-brand-200">הדבר האחד שהכי ישפר אותה</p>
+        <b class="block font-display text-[23px] leading-tight">${result.one.title}</b>
+        <p class="mt-1.5 text-[15px] text-white/90">${result.one.why}</p>
       </div>
-      <details class="group rounded-2xl bg-white ring-1 ring-line" open>
-        <summary class="flex cursor-pointer items-center gap-2 px-4 py-3 text-[15px] font-bold">הציון בכל ממד<span class="text-[13px] font-semibold text-muted">1 עד 5</span><${Icon} name="chevron-down" size=${16} class="ms-auto transition group-open:rotate-180" /></summary>
+      <details class="group rounded-2xl bg-white ring-1 ring-line">
+        <summary class="flex cursor-pointer items-center gap-2 px-4 py-3 text-[15px] font-bold">הציון המלא<${Icon} name="chevron-down" size=${16} class="ms-auto transition group-open:rotate-180" /></summary>
         <ul class="divide-y divide-line px-4 pb-2">
           ${result.scores.map(([dim, sc, why]) => html`<li key=${dim} class="flex items-start gap-3 py-2.5">
             <span class="w-24 shrink-0 text-[14px] font-bold">${dim}</span>
@@ -68,13 +86,11 @@ export function Review({ result, busy, onCheck, text, setText }) {
           </li>`)}
         </ul>
       </details>
-      ${result.flags?.length > 0 && html`<p class="mt-3 flex flex-wrap items-center gap-1.5 text-[14px]"><b class="text-warn">שימו לב:</b>${result.flags.map((f) => html`<span key=${f} class="rounded-full bg-warn-50 px-2 py-0.5 font-semibold text-warn">${f}</span>`)}</p>`}
-      <${SharkTip} class="mt-5">בחלקים הבאים בונים את הגרסה המשופרת. מה שכבר ידוע מההצעה שלך ומהשלבים הקודמים, כבר ממולא.<//>
     </div>`}
   </div>`;
 }
 
-// Rule-based review for any pasted text, so the mockup works without a model.
+// Rule-based review for any pasted text, so the step works without a model.
 export function reviewByRules(text) {
   const has = (re) => re.test(text);
   const sc = {
@@ -99,29 +115,45 @@ export function reviewByRules(text) {
   const scores = REVIEW_DIMS.map((d) => [d, sc[d], why[d] || (sc[d] <= 2 ? 'חלש. נבנה את זה בחלקים הבאים.' : 'סביר.')]);
   const worst = scores.reduce((a, b) => (b[1] < a[1] ? b : a));
   return {
-    line: 'הצעה שאפשר להשוות לאחרות: הלקוח רואה מה עושים, ולא לאן מגיעים.',
+    line: 'הלקוח רואה מה עושים, ולא לאן מגיעים. קל להשוות אותה לאחרות.',
     scores,
     one: worst[0] === 'התוצאה' ? { title: 'למכור את היעד, לא את השירות', why: 'בלי תוצאה עם זמן, הלקוח משווה מחיר מול מחיר.' } : { title: `לחזק את "${worst[0]}"`, why: worst[2] },
-    flags: [...(sc['התוצאה'] < 3 ? ["רשימת פיצ'רים במקום תוצאה"] : []), ...(has(/הנחה|מבצע/) ? ['הנחה היא הכלי המרכזי'] : [])],
+    flags: [],
   };
 }
 
-// ---------- the live offer card (beside each screen on wide screens) ----------
-export function OfferCard({ s, noMeter }) {
-  const comps = activeComps(s);
-  const bons = bonusList(s);
-  const Row = ({ k, children, empty }) => html`<div class="border-b border-dashed border-line py-2 last:border-0"><p class="text-[12px] font-bold text-muted">${k}</p>${empty ? html`<p class="text-[14px] text-faint">${empty}</p>` : children}</div>`;
+// ---------- "ההצעה שלך": the six parts, what is done, what is now, what is next ----------
+const ROWS = [
+  (s) => s.outcome.text && `${s.outcome.text}, תוך ${s.outcome.time}`,
+  (s) => `${activeProblems(s).length} דברים שעוצרים את הלקוח`,
+  (s) => `${activeComps(s).length} רכיבים`,
+  (s) => `${fmt(s.price)} · ערך ${fmtRatio(ratio(s))}`,
+  (s) => guaranteeOK(s.guarantee) && s.guarantee.name,
+  (s) => s.name.text,
+];
+export function JourneyCard({ s, part, onGo }) {
   return html`<div class="paper rounded-[18px] p-4">
-    <p class="fb-eyebrow mb-0.5 !text-[12px]">ההצעה שלך</p>
-    <p class="mb-2 text-[12px] text-muted">מתמלאת עם כל תשובה</p>
-    <b class=${cx('block font-display text-[17px] leading-tight', !s.name.text && 'text-faint')}>${s.name.text || 'עוד בלי שם'}</b>
-    <div class="mt-2">
-      <${Row} k="התוצאה" empty=${!s.outcome.text && 'עוד לא נבחרה'}><p class="text-[14px] leading-snug">${s.outcome.text}, תוך ${s.outcome.time}</p><//>
-      <${Row} k=${`מה כלול${comps.length ? ` · ${comps.length}` : ''}`}>${comps.map((c) => html`<p key=${c.id} class="flex justify-between gap-2 text-[14px]"><span class="truncate">${c.name}</span><span class="shrink-0 tabular-nums text-muted">${fmt(c.value)}</span></p>`)}<//>
-      ${bons.length > 0 && html`<${Row} k=${`בונוסים · ${bons.length}`}>${bons.map((b) => html`<p key=${b.id} class="truncate text-[14px]">${b.name}</p>`)}<//>`}
-      ${!noMeter && html`<div class="py-2"><${Meter} compact value=${total(s)} price=${s.price} /></div>`}
-      <${Row} k="ההבטחה" empty=${!guaranteeOK(s.guarantee) && 'עוד לא'}><p class="text-[14px] font-bold">${s.guarantee.name}</p><//>
-    </div>
+    <p class="fb-eyebrow mb-3 !text-[12px]">ההצעה שלך</p>
+    <ol class="flex flex-col">
+      ${PARTS.map((label, i) => {
+        const now = i === part;
+        const done = !now && i <= s.reached;
+        const next = !now && !done && i === part + 1;
+        const value = (done || now) && ROWS[i](s);
+        return html`<li key=${label} class="relative flex gap-3 pb-3 last:pb-0">
+          ${i < PARTS.length - 1 && html`<span class=${cx('absolute start-[11px] top-7 bottom-0 w-0.5', done ? 'bg-brand-300' : 'bg-line')}></span>`}
+          <span class=${cx('relative z-[1] grid h-6 w-6 shrink-0 place-items-center rounded-full text-[12px] font-black', now ? 'bg-brand-600 text-white ring-4 ring-brand-100' : done ? 'bg-brand-100' : 'bg-canvas text-faint ring-1 ring-line')}>${done ? html`<${PencilCheck} size=${14} color="#0038b8" weight=${3} />` : i + 1}</span>
+          <button type="button" disabled=${!done} onClick=${() => onGo(i)} class=${cx('min-w-0 flex-1 text-start', done && 'cursor-pointer hover:opacity-80')}>
+            <span class="flex items-center gap-2">
+              <b class=${cx('text-[14px]', now ? 'text-brand-600' : done ? 'text-ink' : 'text-faint')}>${label}</b>
+              ${now && html`<span class="rounded-full bg-brand-600 px-1.5 text-[11px] font-bold text-white">עכשיו</span>`}
+              ${next && html`<span class="rounded-full bg-canvas px-1.5 text-[11px] font-bold text-muted ring-1 ring-line">הבא</span>`}
+            </span>
+            ${value && html`<span class="line-clamp-2 text-[13px] leading-snug text-muted">${value}</span>`}
+          </button>
+        </li>`;
+      })}
+    </ol>
   </div>`;
 }
 
@@ -129,11 +161,10 @@ export function OfferCard({ s, noMeter }) {
 export function OfferDoc({ s }) {
   const comps = activeComps(s);
   const bons = bonusList(s);
-  const pText = (pid) => s.problems.find((p) => p.id === pid)?.text;
   const cap = capacity();
   const why = [
-    s.seats.on && `${cap.perMonth} עסקים חדשים בחודש, כדי שכל קמפיין ייבנה אישית.`,
-    s.urgency.id !== 'none' && s.urgency.date && `עד ${new Date(s.urgency.date).toLocaleDateString('he-IL')}.`,
+    s.urgency.id === 'seats' && `${cap.perMonth} עסקים חדשים בחודש, כדי שכל קמפיין ייבנה אישית.`,
+    s.urgency.id === 'cohort' && s.urgency.date && `מי שנרשם עד ${new Date(s.urgency.date).toLocaleDateString('he-IL')} מתחיל במחזור הקרוב.`,
   ].filter(Boolean);
   return html`<article id="offer-doc" class="paper rounded-[18px] p-5 md:p-8">
     <header class="mb-5 flex items-center justify-between gap-3 border-b-2 border-brand-600 pb-3">
@@ -141,24 +172,18 @@ export function OfferDoc({ s }) {
       <img src="assets/flowbiz-mark-color.png" alt="" class="h-7 w-auto opacity-60" />
     </header>
     <h2 class="font-display text-[26px] font-black leading-tight text-brand-900 md:text-[30px]">${s.name.text || 'ההצעה שלי'}</h2>
-    <p class="mt-1 text-[15px]"><b>למי:</b> ${USER.audience}</p>
-    <p class="text-[15px]"><b>התוצאה:</b> ${s.outcome.text}, תוך ${s.outcome.time}</p>
+    <p class="mt-2 text-[17px]">${s.outcome.text}, <b>תוך ${s.outcome.time}</b>.</p>
+    <p class="text-[14px] text-muted">ל${USER.audience}</p>
 
-    <h3 class="mb-2 mt-5 font-display text-[17px] font-bold">מה כלול</h3>
-    <table class="w-full text-[14px]">
-      <thead><tr class="border-b border-line text-start text-[12px] text-muted"><th class="py-1.5 text-start font-bold">רכיב</th><th class="py-1.5 text-start font-bold max-sm:hidden">מה זה פותר</th><th class="py-1.5 text-end font-bold">ערך</th></tr></thead>
-      <tbody>${comps.map((c) => {
-        const solves = [...new Set(s.ideas.filter((d) => d.in && c.ideas.includes(d.id)).flatMap((d) => d.solves))];
-        return html`<tr key=${c.id} class="border-b border-dashed border-line align-top"><td class="py-2 pe-2"><b>${c.name}</b><br /><span class="text-muted">${c.promise}</span></td><td class="py-2 pe-2 text-muted max-sm:hidden">"${pText(solves[0])}"</td><td class="py-2 text-end tabular-nums">${fmt(c.value)}</td></tr>`;
-      })}</tbody>
-    </table>
-    ${bons.length > 0 && html`<h3 class="mb-2 mt-5 font-display text-[17px] font-bold">בונוסים</h3>
-      <table class="w-full text-[14px]"><tbody>${bons.map((b) => html`<tr key=${b.id} class="border-b border-dashed border-line align-top"><td class="py-2 pe-2"><b>${b.name}</b></td><td class="py-2 pe-2 text-muted max-sm:hidden">"${pText(b.for)}"</td><td class="py-2 text-end tabular-nums">${fmt(b.value)}</td></tr>`)}</tbody></table>`}
+    <h3 class="mb-2 mt-6 font-display text-[17px] font-bold">מה מקבלים</h3>
+    <ul class="flex flex-col">${comps.map((c) => html`<li key=${c.id} class="flex items-start justify-between gap-3 border-b border-dashed border-line py-2 text-[15px]"><span><b>${c.name}</b><br /><span class="text-muted">${c.promise}</span></span><span class="shrink-0 tabular-nums text-muted">${fmt(c.value)}</span></li>`)}</ul>
+    ${bons.length > 0 && html`<h3 class="mb-2 mt-5 font-display text-[17px] font-bold">ובנוסף</h3>
+      <ul class="flex flex-col">${bons.map((b) => html`<li key=${b.id} class="flex items-start justify-between gap-3 border-b border-dashed border-line py-2 text-[15px]"><b>${b.name}</b><span class="shrink-0 tabular-nums text-muted">${fmt(b.value)}</span></li>`)}</ul>`}
     <div class="mt-4 flex flex-wrap items-baseline justify-between gap-3 rounded-xl bg-canvas p-3">
       <span class="text-[15px]">ערך כולל <b class="font-display text-[20px] tabular-nums text-money">${fmt(total(s))}</b></span>
       <span class="text-[15px]">המחיר <b class="font-display text-[20px] tabular-nums">${fmt(s.price)}</b> <span class="text-[13px] text-muted">${payLine(s)}</span></span>
     </div>
-    ${guaranteeOK(s.guarantee) && html`<h3 class="mb-1 mt-5 font-display text-[17px] font-bold">ההבטחה: ${s.guarantee.name}</h3><p class="text-[15px]">${guaranteeLine(s.guarantee)}</p><p class="mt-1 text-[12px] text-muted">${s.guarantee.cancel}</p>`}
+    ${guaranteeOK(s.guarantee) && html`<h3 class="mb-1 mt-5 font-display text-[17px] font-bold">${s.guarantee.name}</h3><p class="text-[15px]">${guaranteeLine(s.guarantee)}</p><p class="mt-1 text-[12px] text-muted">${s.guarantee.cancel}</p>`}
     ${why.length > 0 && html`<h3 class="mb-1 mt-5 font-display text-[17px] font-bold">למה עכשיו</h3>${why.map((w) => html`<p key=${w} class="text-[15px]">${w}</p>`)}`}
   </article>`;
 }
@@ -171,7 +196,7 @@ export function Done({ s, notify, onAnother, onAddMin, minAdded }) {
   }, []);
   const [tab, setTab] = useState('doc');
   const min = minimum(s);
-  const miss = missing(s);
+  const miss = missing(s).slice(0, 2);
   const wa = whatsappText(s);
   const copy = async () => {
     try {
@@ -179,60 +204,44 @@ export function Done({ s, notify, onAnother, onAddMin, minAdded }) {
     } catch {}
     notify('הגרסה לוואטסאפ הועתקה', 'copy');
   };
-  const entry = BASKET.find((p) => p.role === 'entry');
-  const recurring = BASKET.find((p) => p.role === 'recurring');
-  const bridge = BASKET.find((p) => p.role === 'bridge');
-  return html`<div class="mx-auto max-w-[1120px] px-4 py-6 md:px-8 md:py-8">
-    <div class="no-print mb-6 flex flex-wrap items-end justify-between gap-4">
+  return html`<div class="mx-auto max-w-[1080px] px-4 py-6 md:px-8 md:py-8">
+    <div class="no-print mb-5 flex flex-wrap items-end justify-between gap-4">
       <div>
-        <p class="fb-eyebrow mb-1">סיימת את שלב 8</p>
-        <h1 class="fb-h1 text-[28px] md:text-[36px]">ההצעה <span class="fb-marker">מוכנה</span></h1>
-        <p class="mt-1 text-[16px] text-muted">${fmtRatio(ratio(s))} מהמחיר, עם הבטחה. נשמרה בקבצים › בניית מותג אישי.</p>
+        <h1 class="fb-h1 text-[30px] md:text-[38px]">ההצעה <span class="fb-marker">מוכנה</span></h1>
+        <p class="mt-1 text-[16px] text-muted">ערך ${fmtRatio(ratio(s))} מהמחיר, עם הבטחה. נשמרה בקבצים.</p>
       </div>
-      <${Note} tone="white" tilt=${-2} class="fb-badge-note !w-[220px] !pt-8 max-md:hidden">
-        <span class="fb-note-kicker">שלב הושלם</span>
-        <span class="text-[13px]">חסכת בשלב הזה</span>
-        <span class="relative font-display text-[30px] font-black text-money">${fmt(SAVED.amount)}<${PencilLine} color="#12805c" class="absolute inset-x-0 -bottom-1 h-2 w-full" /></span>
+      <${Note} tone="white" tilt=${-2} class="fb-badge-note !w-[200px] !pt-7 max-md:hidden">
+        <span class="fb-note-kicker">חסכת בשלב הזה</span>
+        <span class="relative font-display text-[28px] font-black text-money">${fmt(SAVED.amount)}<${PencilLine} color="#12805c" class="absolute inset-x-0 -bottom-1 h-2 w-full" /></span>
         <span class="text-[12px] text-muted">${SAVED.like}</span>
       <//>
     </div>
-    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
       <div class="min-w-0">
         <div class="no-print mb-3 flex items-center gap-1 rounded-2xl bg-white p-1 ring-1 ring-line" role="tablist">
-          ${[['doc', 'file-text', 'מסמך ההצעה'], ['wa', 'message-circle', 'גרסה לוואטסאפ']].map(([id, icon, l]) => html`<button key=${id} type="button" role="tab" aria-selected=${tab === id} onClick=${() => setTab(id)} class=${cx('flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl text-[14px] font-bold cursor-pointer', tab === id ? 'bg-brand-600 text-white' : 'text-muted hover:text-ink')}><${Icon} name=${icon} size=${16} />${l}</button>`)}
+          ${[['doc', 'file-text', 'מסמך ההצעה'], ['wa', 'message-circle', 'לוואטסאפ']].map(([id, icon, l]) => html`<button key=${id} type="button" role="tab" aria-selected=${tab === id} onClick=${() => setTab(id)} class=${cx('flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl text-[14px] font-bold cursor-pointer', tab === id ? 'bg-brand-600 text-white' : 'text-muted hover:text-ink')}><${Icon} name=${icon} size=${16} />${l}</button>`)}
         </div>
         ${tab === 'doc'
-          ? html`<${OfferDoc} s=${s} />
-            <div class="no-print mt-3 flex flex-wrap gap-2"><${Button} variant="secondary" onClick=${() => window.print()}><${Icon} name="download" size=${17} />הורדה כ-PDF<//><${Button} variant="text" onClick=${() => notify('במערכת: נפתח עמוד ההצעה ב"הדפים שלי"', 'layout-template')}><${Icon} name="layout-template" size=${17} />לדף ההצעה<//></div>`
-          : html`<div class="rounded-[18px] bg-[#e9e3d6] p-4 md:p-6">
-              <div class="ms-auto max-w-[460px] whitespace-pre-wrap rounded-2xl rounded-se-sm bg-[#d9fdd3] p-3.5 text-[15px] leading-relaxed shadow-sm">${wa.replace(/\*/g, '')}</div>
-            </div>
+          ? html`<${OfferDoc} s=${s} /><div class="no-print mt-3"><${Button} variant="secondary" onClick=${() => window.print()}><${Icon} name="download" size=${17} />הורדה כ-PDF<//></div>`
+          : html`<div class="rounded-[18px] bg-[#e9e3d6] p-4 md:p-6"><div class="ms-auto max-w-[460px] whitespace-pre-wrap rounded-2xl rounded-se-sm bg-[#d9fdd3] p-3.5 text-[15px] leading-relaxed shadow-sm">${wa.replace(/\*/g, '')}</div></div>
             <div class="mt-3"><${Button} variant="secondary" onClick=${copy}><${Icon} name="copy" size=${17} />להעתיק<//></div>`}
       </div>
-      <div class="no-print flex flex-col gap-4">
-        ${miss.length > 0 && html`<section class="fb-panel !p-4">
-          <h2 class="mb-2 font-display text-[17px] font-bold">מה עוד חסר</h2>
-          <ul class="flex flex-col gap-2">${miss.map((m) => html`<li key=${m.text} class="flex items-start gap-2 text-[14px]"><${Icon} name=${m.icon} size=${16} class="mt-0.5 text-warn" />${m.text}</li>`)}</ul>
+      <div class="no-print flex flex-col gap-3">
+        ${miss.length > 0 && html`<section class="rounded-2xl bg-white p-4 ring-1 ring-line">
+          <h2 class="mb-2 font-display text-[16px] font-bold">מה עוד חסר</h2>
+          <ul class="flex flex-col gap-2">${miss.map((m) => html`<li key=${m.text} class="flex items-start gap-2 text-[14px]"><${Icon} name=${m.icon} size=${16} class="mt-0.5 shrink-0 text-warn" />${m.text}</li>`)}</ul>
         </section>`}
-        <section class="fb-panel !p-4">
-          <h2 class="mb-1 font-display text-[17px] font-bold">הרצף סביב ההצעה</h2>
-          <p class="mb-2 text-[13px] text-muted">מה בא לפני, אחרי, ולמי שאומר לא. מהסל שלך.</p>
-          <ul class="flex flex-col gap-2 text-[14px]">
-            <li class="flex gap-2"><b class="w-[72px] shrink-0">לפני</b><span>${entry?.name}, חינם</span></li>
-            <li class="flex gap-2"><b class="w-[72px] shrink-0">ההצעה</b><span>${s.name.text || CORE.name}</span></li>
-            <li class="flex gap-2"><b class="w-[72px] shrink-0">אחרי</b><span>${recurring?.name}, ${fmt(recurring?.price)} בחודש</span></li>
-            <li class="flex gap-2"><b class="w-[72px] shrink-0">אמר לא</b><span>${bridge?.name}, ${fmt(bridge?.price)}, או "המינימום"</span></li>
-          </ul>
-          <div class="mt-3 rounded-xl bg-canvas p-3 ring-1 ring-line">
-            <p class="flex items-baseline justify-between gap-2"><b class="text-[15px]">המינימום</b><b class="font-display tabular-nums">${fmt(min.price)}</b></p>
-            <p class="text-[13px] text-muted">רק ${min.keep.map((c) => c.name).join(' ו')}, ${g('הלקוח עושה', 'הלקוח עושה')} בעצמו. בלי ${min.drop.map((c) => c.name).join(', ')} ובלי הבטחה.</p>
-            <p class="mt-1 text-[12px] text-muted">לא אותה חבילה בפחות: פחות רכיבים, ולכן פחות כסף (${Math.round(min.share * 100)}% מהערך).</p>
+        <details class="group rounded-2xl bg-white ring-1 ring-line">
+          <summary class="flex cursor-pointer items-center gap-2 p-4 text-[15px] font-bold">למי שאומר לא<${Icon} name="chevron-down" size=${16} class="ms-auto transition group-open:rotate-180" /></summary>
+          <div class="px-4 pb-4">
+            <p class="flex items-baseline justify-between gap-2"><b class="text-[15px]">"המינימום"</b><b class="font-display tabular-nums">${fmt(min.price)}</b></p>
+            <p class="text-[14px] text-muted">רק ${min.keep.map((c) => c.name).join(' ו')}, בלי הבטחה. פחות רכיבים, ולכן פחות כסף.</p>
             <button type="button" disabled=${minAdded} onClick=${onAddMin} class="mt-2 inline-flex items-center gap-1.5 text-[14px] font-bold text-brand-600 hover:underline disabled:text-muted disabled:no-underline cursor-pointer"><${Icon} name=${minAdded ? 'check' : 'plus'} size=${15} />${minAdded ? 'נוסף לסל המוצרים' : 'להוסיף לסל המוצרים'}</button>
           </div>
-        </section>
+        </details>
         <button type="button" onClick=${onAnother} class="flex items-center gap-3 rounded-2xl border-[1.5px] border-dashed border-brand-300 bg-white p-4 text-start hover:border-brand-600 cursor-pointer">
-          <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-600"><${Icon} name="plus" size=${20} /></span>
-          <span><b class="block text-[15px]">לבנות הצעה למוצר נוסף</b><span class="text-[13px] text-muted">אותם חלקים, למוצר אחר מהסל</span></span>
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-600"><${Icon} name="plus" size=${18} /></span>
+          <b class="text-[15px]">הצעה למוצר נוסף מהסל</b>
         </button>
       </div>
     </div>

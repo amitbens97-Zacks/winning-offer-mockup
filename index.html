@@ -112,6 +112,16 @@
       @keyframes draw { from { stroke-dashoffset: 700; } to { stroke-dashoffset: 0; } }
       @keyframes popIn { from { opacity: 0; transform: scale(0.96) translateY(4px); } to { opacity: 1; transform: none; } }
       .pop-in { animation: popIn 0.18s ease-out backwards; }
+      /* The opening scale: blocks drop onto the value pan, then the beam tips toward value. */
+      .sc-drop { animation: scDrop 0.5s cubic-bezier(0.3, 1.4, 0.5, 1) backwards; }
+      @keyframes scDrop { from { transform: translateY(-70px); opacity: 0; } }
+      .sc-beam { transform-box: view-box; transform-origin: 210px 70px; animation: scTilt 0.9s 1.45s ease-in-out both; }
+      @keyframes scTilt { from { transform: rotate(0deg); } to { transform: rotate(7deg); } }
+      .sc-right { animation: scDown 0.9s 1.45s ease-in-out both; }
+      @keyframes scDown { to { transform: translateY(17px); } }
+      .sc-left { animation: scUp 0.9s 1.45s ease-in-out both; }
+      @keyframes scUp { to { transform: translateY(-17px); } }
+      .sc-note { animation: rise 0.4s 2.3s ease-out backwards; }
       .rise { animation: rise 0.35s ease-out backwards; }
       .slide-in { animation: slideIn 0.3s ease-out backwards; }
       .grow { animation: grow 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards; transform-origin: top; }
