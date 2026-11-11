@@ -4,7 +4,7 @@ import { html, useState, Icon, cx } from './lib.js';
 import { InlineEdit, Button } from './components.js';
 import { inputCls } from './ui.js';
 import { Screen, MoneyEdit } from './kit.js';
-import { OUTCOMES, TIMES, LENSES, BASIS, GENDER, g } from './data.js';
+import { OUTCOMES, TIMES, LENSES, BASIS, CLIENT_FILE, GENDER, g } from './data.js';
 import { activeComps, ideasOf, loose, compsTotal, covered, openObstacles, fmt } from './calc.js';
 
 const pickF = (o, k) => (GENDER === 'f' && o[`${k}F`]) || o[k];
@@ -12,6 +12,8 @@ const Radio = ({ on }) => html`<span class=${cx('mt-1 grid h-5 w-5 shrink-0 plac
 const MoreLink = ({ onClick, busy, children }) => html`<button type="button" onClick=${onClick} disabled=${busy} class="mt-4 inline-flex items-center gap-1.5 text-[15px] font-bold text-brand-600 hover:underline cursor-pointer disabled:text-muted"><${Icon} name="sparkles" size=${16} />${busy ? 'הכריש כותב...' : children}</button>`;
 
 // ---------- part 1: where the client gets to ----------
+// A before → after picture on top: today (the pain from the client file) and the end
+// (the chosen outcome, with what it looks like). Below it, the shark's three outcomes to pick from.
 export function OutcomeScreen({ s, set, aside, onMore, busy }) {
   const o = s.outcome;
   const [editing, setEditing] = useState(false);
@@ -21,30 +23,51 @@ export function OutcomeScreen({ s, set, aside, onMore, busy }) {
   };
   const edit = (p) => set((x) => ({ ...x, outcome: { ...x.outcome, ...p, byShark: false } }));
   const options = s.altOutcomes || OUTCOMES;
+  const chosen = options.find((x) => x.id === o.id);
   return html`<${Screen} title=${['מה הלקוח ', 'ישיג', ' בסוף?']} sub=${g('בחר את התוצאה שבשבילה הוא קונה: לא מה תעשה איתו, מה ישתנה אצלו.', 'בחרי את התוצאה שבשבילה הוא קונה: לא מה תעשי איתו, מה ישתנה אצלו.')} aside=${aside}>
-    <div class="flex flex-col gap-3" role="radiogroup" aria-label="התוצאה">
+    <!-- Before → after -->
+    <section class="grid overflow-hidden rounded-3xl bg-white shadow-[0_12px_32px_-16px_rgba(0,56,184,.35)] ring-1 ring-line md:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)]">
+      <div class="relative flex flex-col gap-2 bg-canvas p-5 md:p-6">
+        <p class="inline-flex items-center gap-1.5 text-[13px] font-bold text-muted"><${Icon} name="cloud-drizzle" size=${16} />היום</p>
+        <p class="text-[16px] font-semibold leading-snug text-ink-2">${CLIENT_FILE.pain}</p>
+        <span aria-hidden="true" class="absolute z-10 grid h-9 w-9 place-items-center rounded-full bg-white text-brand-600 shadow ring-1 ring-line max-md:-bottom-[18px] max-md:left-1/2 max-md:-translate-x-1/2 md:-end-[18px] md:top-1/2 md:-translate-y-1/2"><${Icon} name="arrow-left" size=${18} class="max-md:-rotate-90" /></span>
+      </div>
+      <div class="relative bg-brand-600 p-5 pt-7 text-white md:p-6 md:ps-9">
+        <span aria-hidden="true" class="pointer-events-none absolute -bottom-12 -end-12 h-40 w-40 rounded-full bg-white/10"></span>
+        <div class="relative flex items-center justify-between gap-2">
+          <p class="inline-flex items-center gap-1.5 text-[13px] font-bold text-white/80"><${Icon} name="sun" size=${16} />בסוף</p>
+          <span class="inline-flex h-7 items-center gap-1 rounded-full bg-white/15 px-2.5 text-[13px] font-bold"><${Icon} name="clock" size=${13} />תוך ${o.time}</span>
+        </div>
+        ${editing
+          ? html`<div class="rise relative mt-3">
+              <textarea rows="2" class=${cx(inputCls, '!h-auto py-2 text-[17px] font-semibold leading-snug !text-ink')} value=${o.text} onInput=${(e) => edit({ text: e.target.value })} aria-label="התוצאה"></textarea>
+              <div class="mt-3 flex flex-wrap items-center gap-2">
+                ${TIMES.map((t) => html`<button key=${t} type="button" onClick=${() => edit({ time: t })} class=${cx('h-9 rounded-xl px-3 text-[14px] font-bold transition cursor-pointer', o.time === t ? 'bg-white text-brand-600' : 'bg-white/15 text-white hover:bg-white/25')}>${t}</button>`)}
+                <button type="button" onClick=${() => setEditing(false)} class="ms-auto inline-flex h-9 items-center gap-1 rounded-xl bg-white px-3 text-[14px] font-bold text-brand-600 cursor-pointer"><${Icon} name="check" size=${15} />סיום</button>
+              </div>
+            </div>`
+          : html`<div key=${o.id + o.text} class="rise relative">
+              <p class="mt-2 font-display text-[22px] font-black leading-tight md:text-[26px]">${o.text}</p>
+              ${o.status && html`<p class="mt-2 text-[15px] text-white/85">“${o.status}”</p>`}
+              <button type="button" onClick=${() => setEditing(true)} class="mt-3 inline-flex items-center gap-1 rounded-lg px-1 text-[14px] font-bold text-white/90 underline-offset-4 hover:underline cursor-pointer"><${Icon} name="pencil" size=${14} />לערוך את הניסוח</button>
+            </div>`}
+      </div>
+    </section>
+    ${chosen?.risky && html`<p class="mt-3 flex items-center gap-1.5 text-[14px] font-semibold text-warn"><${Icon} name="triangle-alert" size=${15} />מספר מדויק: רק אם ${g('אתה יכול', 'את יכולה')} לעמוד מאחוריו</p>`}
+
+    <!-- The shark's three outcomes -->
+    <p class="mb-2 mt-7 text-[14px] font-bold text-muted">הכריש הציע שלוש תוצאות. ${g('בחר', 'בחרי')} אחת:</p>
+    <div class="grid gap-2.5 md:grid-cols-3" role="radiogroup" aria-label="התוצאה">
       ${options.map((opt) => {
         const on = o.id === opt.id;
-        return html`<div key=${opt.id} class=${cx('rounded-2xl border-[1.5px] bg-white transition', on ? 'border-brand-600 ring-4 ring-brand-100' : 'border-line hover:border-brand-300')}>
-          <button type="button" role="radio" aria-checked=${on} onClick=${() => !on && pick(opt)} class="flex w-full items-start gap-3 p-4 text-start cursor-pointer">
-            <${Radio} on=${on} />
-            <span class="min-w-0 flex-1">
-              <b class="block font-display text-[19px] leading-snug">${on ? o.text : pickF(opt, 'text')}</b>
-              <span class="mt-2 inline-flex h-7 items-center gap-1 rounded-full bg-brand-50 px-2.5 text-[13px] font-bold text-brand-600"><${Icon} name="clock" size=${13} />תוך ${on ? o.time : opt.time}</span>
-            </span>
-          </button>
-          ${on && !editing && html`<div class="flex items-center justify-between gap-3 px-4 pb-3 ps-12">
-            ${opt.risky ? html`<span class="text-[13px] font-semibold text-warn">מספר מדויק: רק אם ${g('אתה יכול', 'את יכולה')} לעמוד מאחוריו</span>` : html`<span></span>`}
-            <button type="button" onClick=${() => setEditing(true)} class="inline-flex items-center gap-1 text-[14px] font-bold text-brand-600 hover:underline cursor-pointer"><${Icon} name="pencil" size=${14} />לערוך</button>
-          </div>`}
-          ${on && editing && html`<div class="rise border-t border-line p-4 ps-12">
-            <textarea rows="2" class=${cx(inputCls, '!h-auto py-2 leading-snug')} value=${o.text} onInput=${(e) => edit({ text: e.target.value })} aria-label="התוצאה"></textarea>
-            <div class="mt-3 flex flex-wrap items-center gap-2">
-              ${TIMES.map((t) => html`<button key=${t} type="button" onClick=${() => edit({ time: t })} class=${cx('h-9 rounded-xl border-[1.5px] px-3 text-[14px] font-bold cursor-pointer', o.time === t ? 'border-brand-600 bg-brand-100 text-brand-600' : 'border-line bg-white hover:border-brand-300')}>${t}</button>`)}
-              <${Button} variant="mini" class="ms-auto" onClick=${() => setEditing(false)}>סיום<//>
-            </div>
-          </div>`}
-        </div>`;
+        return html`<button key=${opt.id} type="button" role="radio" aria-checked=${on} onClick=${() => !on && pick(opt)} class=${cx('group relative flex flex-col items-start gap-2 rounded-2xl border-[1.5px] p-4 text-start transition cursor-pointer', on ? 'border-brand-600 bg-brand-50 ring-4 ring-brand-100' : 'border-line bg-white hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-sm')}>
+          <span class=${cx('grid h-6 w-6 place-items-center rounded-full transition', on ? 'bg-brand-600 text-white' : 'bg-canvas text-transparent ring-1 ring-line group-hover:text-brand-300')}><${Icon} name="check" size=${14} /></span>
+          <b class="font-display text-[16px] leading-snug">${on ? o.text : pickF(opt, 'text')}</b>
+          <span class="mt-auto flex flex-wrap gap-1.5">
+            <span class="inline-flex h-6 items-center gap-1 rounded-full bg-white px-2 text-[12px] font-bold text-brand-600 ring-1 ring-brand-200"><${Icon} name="clock" size=${12} />תוך ${on ? o.time : opt.time}</span>
+            ${opt.risky && html`<span class="inline-flex h-6 items-center rounded-full bg-warn-50 px-2 text-[12px] font-bold text-warn">מספר מדויק</span>`}
+          </span>
+        </button>`;
       })}
     </div>
     <${MoreLink} onClick=${onMore} busy=${busy}>ניסוחים אחרים<//>

@@ -122,13 +122,13 @@ export function checks(s) {
     { id: 'audience', q: 'ברור למי ההצעה, והקהל עומד בארבעת התנאים?', state: 'ok', note: `${USER.audience}. ארבעת התנאים סומנו בצייד הלקוחות.` },
     { id: 'outcome', q: 'ההצעה מתארת תוצאה עם פרק זמן, ולא רשימת שירותים?', state: s.outcome.text && s.outcome.time ? 'ok' : 'todo', note: s.outcome.text ? `"${s.outcome.text}", תוך ${s.outcome.time}.` : 'עוד לא נבחרה תוצאה.', screen: 'outcome' },
     { id: 'proof', q: 'יש הוכחה אמיתית שזה עובד, מלקוחות אמיתיים?', state: USER.clientsSoFar > 0 ? 'ok' : 'todo', note: `עוד אין לקוחות, וזה בסדר בהתחלה. בינתיים ההבטחה והניסיון שלך מחזיקים את זה. נוסף ל"מה עוד חסר".`, proof: true },
-    { id: 'win', q: 'יש ניצחון ראשון מהיר, והלקוח רואה את ההתקדמות?', state: win ? 'ok' : 'todo', note: win ? 'מודעה ראשונה באוויר בתוך 10 ימים, ודוח של שורה אחת בכל שבוע.' : 'אין ניצחון בשבועות הראשונים. אפשר להחזיר את "מודעה ראשונה באוויר".', screen: 'matrix' },
+    { id: 'win', q: 'יש ניצחון ראשון מהיר, והלקוח רואה את ההתקדמות?', state: win ? 'ok' : 'todo', note: win ? 'לילה ראשון לפי התוכנית בתוך 3 ימים, ויומן של שורה אחת בכל בוקר.' : 'אין ניצחון בימים הראשונים. אפשר להחזיר את "לילה ראשון לפי התוכנית".', screen: 'matrix' },
     { id: 'effort', q: 'ברור מה יורד מהלקוח, ומה אנחנו עושים בשבילו?', state: forYou.length ? 'ok' : 'todo', note: forYou.length ? `${forYou.length} דברים נעשים בשביל הלקוח, למשל ${forYou[0].text.split(',')[0]}.` : 'הכול נשאר על הלקוח.', screen: 'matrix' },
     { id: 'unique', q: 'אי אפשר להשוות את ההצעה לשל מתחרה, שורה מול שורה?', state: named.length >= 3 && guaranteeOK(s.guarantee) ? 'ok' : 'todo', note: named.length >= 3 ? `${named.length} רכיבים עם שם שמבטיח תוצאה${guaranteeOK(s.guarantee) ? ', והבטחה' : ''}. אין "12 פגישות" להשוות.` : 'פחות משלושה רכיבים עם שם.', screen: 'components' },
     { id: 'value', q: 'הערך הכולל, עם ערכים מוסברים, גדול בהרבה מהמחיר?', state: r >= 2 && !unexplained(s).length ? 'ok' : 'todo', note: `${fmt(total(s))} מול ${fmt(s.price)}: ${fmtRatio(r)}.${unexplained(s).length ? ` ל-${unexplained(s).length} ערכים אין עדיין הסבר.` : ''}`, screen: r < 2 ? 'value' : 'components' },
     { id: 'guarantee', q: 'יש הבטחה במבנה "אם לא X תוך Y, אנחנו Z"?', state: guaranteeOK(s.guarantee) ? 'ok' : 'todo', note: guaranteeOK(s.guarantee) ? `"${s.guarantee.name}": ${guaranteeLine(s.guarantee)}` : 'חסר חלק במשפט, או שעוד אין הבטחה.', screen: 'guarantee' },
     { id: 'scarcity', q: 'המחסור והדחיפות אמיתיים, ואפשר להסביר אותם?', state: !urgent ? 'na' : noDate ? 'todo' : 'ok', note: !urgent ? 'לא בשימוש, וזה בסדר.' : noDate ? 'חסר תאריך אמיתי.' : s.urgency.id === 'seats' ? 'לפי הקיבולת האמיתית שלך.' : s.urgency.id === 'price' ? 'המחיר באמת עולה בתאריך שקבעת.' : 'לפי התאריך שקבעת.', screen: 'urgency' },
-    { id: 'sequence', q: 'יש הצעה למה שבא אחרי, ולמי שאומר לא?', state: hasBasketSeq ? 'ok' : 'todo', note: 'בסל: ריטיינר אחרי התוכנית, וסדנה למי שאומר לא. בסיום יש גם "המינימום".' },
+    { id: 'sequence', q: 'יש הצעה למה שבא אחרי, ולמי שאומר לא?', state: hasBasketSeq ? 'ok' : 'todo', note: 'בסל: ליווי המשך אחרי התוכנית, וסדנה למי שאומר לא. בסיום יש גם "המינימום".' },
   ];
 }
 
@@ -158,8 +158,8 @@ export function whatsappText(s) {
     '',
     `${s.guarantee.name ? `*${s.guarantee.name}:* ` : ''}${guaranteeLine(s.guarantee)}`,
     '',
-    `${fmt(s.price)}${s.pay === 'monthly' ? ` (${payLine(s).split(',')[0]})` : ''}.`,
-    g('רוצה לשמוע איך זה ייראה אצלך? שיחה של 20 דקות, בלי התחייבות.', 'רוצה לשמוע איך זה ייראה אצלך? שיחה של 20 דקות, בלי התחייבות.'),
+    `${fmt(s.price)}${s.pay === 'monthly' ? ` (${payLine(s).split(', ')[0]})` : ''}.`,
+    'רוצים לשמוע איך זה ייראה אצלכם? שיחת היכרות של 20 דקות, בלי התחייבות.',
   ];
   return lines.join('\n');
 }

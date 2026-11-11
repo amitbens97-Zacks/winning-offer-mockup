@@ -94,7 +94,7 @@ export function Review({ result, busy, text, setText }) {
 export function reviewByRules(text) {
   const has = (re) => re.test(text);
   const sc = {
-    קהל: has(/בעלי|עסקי|ל(אמהות|מטפלים|קליניקות)/) ? 3 : 2,
+    קהל: has(/בעלי|עסקי|הורים|ל(אמהות|מטפלים|קליניקות)|גיל/) ? 3 : 2,
     התוצאה: has(/תוך|ב-?\d+ (יום|ימים|שבועות|חודשים)/) ? 3 : 1,
     הסבירות: has(/הבטח|אחריות|החזר|לקוחות שלנו|המלצ/) ? 3 : 2,
     הזמן: has(/תוך|שבוע ראשון|מהיום/) ? 3 : 1,
@@ -163,7 +163,7 @@ export function OfferDoc({ s }) {
   const bons = bonusList(s);
   const cap = capacity();
   const why = [
-    s.urgency.id === 'seats' && `${cap.perMonth} עסקים חדשים בחודש, כדי שכל קמפיין ייבנה אישית.`,
+    s.urgency.id === 'seats' && `${cap.perMonth} משפחות חדשות בחודש, כדי שכל תוכנית תיבנה אישית.`,
     s.urgency.id === 'cohort' && s.urgency.date && `מי שנרשם עד ${new Date(s.urgency.date).toLocaleDateString('he-IL')} מתחיל במחזור הקרוב.`,
     s.urgency.id === 'price' && s.urgency.date && `המחיר הזה בתוקף עד ${new Date(s.urgency.date).toLocaleDateString('he-IL')}. אחרי זה ${fmt(s.urgency.newPrice)}.`,
   ].filter(Boolean);
