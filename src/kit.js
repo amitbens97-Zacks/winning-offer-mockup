@@ -114,36 +114,49 @@ export function StateIcon({ state }) {
   return html`<span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-canvas text-faint ring-1 ring-line"><${Icon} name="minus" size=${15} /></span>`;
 }
 
-// The price screen's meter, as plain as an equation: what he gets (the components + the bonuses)
-// against what he pays, the ratio between them, and a mark where ×2 is (the target).
+// The price screen's meter: the two numbers (what he gets, what he pays), then one scale of the
+// ratio from ×1 to ×4 in three zones: under the minimum, the minimum (×2), and where we aim (×3+).
+// One marker shows where the offer is now, and one sentence says what is left.
+const AIM = 3;
+const SCALE_MAX = 4;
 export function ValueMeter({ value, price, priceSlot, foot, comps = value, bonus = 0 }) {
   const r = price > 0 ? value / price : 0;
-  const tone = ratioTone(r);
-  const t = TONE[tone];
-  const target = price * 2;
-  const max = Math.max(value, target * 1.08, 1);
-  const pct = (v) => `${(v / max) * 100}%`;
-  const gap = Math.max(0, Math.ceil((target - value) / 10) * 10);
+  const pos = (x) => `${((Math.min(Math.max(x, 1), SCALE_MAX) - 1) / (SCALE_MAX - 1)) * 100}%`;
+  const need = (x) => fmt(Math.max(0, Math.ceil((price * x - value) / 10) * 10));
+  const zone = r >= AIM ? 'aim' : r >= 2 ? 'min' : 'under';
+  const tone = { under: { text: 'text-warn', dot: 'bg-warn' }, min: { text: 'text-money', dot: 'bg-money' }, aim: { text: 'text-money', dot: 'bg-money' } }[zone];
+  const line = {
+    under: `עוד ${need(2)} של ערך, ומגיעים למינימום (פי 2).`,
+    min: `ההצעה מעל המינימום. שואפים ליותר: עוד ${need(AIM)} של ערך, ומגיעים לפי ${AIM}.`,
+    aim: 'מצוין. לזה שואפים.',
+  }[zone];
+  const zones = [
+    ['under', 'bg-warn-50 ring-1 ring-warn/20'],
+    ['min', 'bg-money-50 ring-1 ring-money/20'],
+    ['aim', 'bg-money/25 ring-1 ring-money/30'],
+  ];
   return html`<div class="fb-panel !p-4 md:!p-5">
-    <div class="grid grid-cols-[1fr_auto_1fr] items-end gap-2 md:gap-3">
+    <div class="flex items-end justify-between gap-3">
       <div class="min-w-0">
         <p class="text-[13px] font-bold text-muted">מה הוא מקבל</p>
-        <b class="whitespace-nowrap font-display text-[24px] font-black tabular-nums text-money md:text-[32px]">${fmt(value)}</b>
-        <p class="whitespace-nowrap text-[12px] tabular-nums text-muted md:text-[13px]">רכיבים ${fmt(comps)}${bonus > 0 ? html` <b class="text-money">+ בונוסים ${fmt(bonus)}</b>` : ''}</p>
+        <b class="whitespace-nowrap font-display text-[26px] font-black tabular-nums text-money md:text-[32px]">${fmt(value)}</b>
+        <p class="whitespace-nowrap text-[12px] tabular-nums text-muted md:text-[13px]">רכיבים ${fmt(comps)}${bonus > 0 ? ` + בונוסים ${fmt(bonus)}` : ''}</p>
       </div>
-      <span class=${cx('mb-1.5 whitespace-nowrap rounded-full px-2.5 py-1 font-display text-[15px] font-black md:px-3 md:text-[17px] tabular-nums transition-colors', tone === 'good' ? 'bg-money-50' : tone === 'mid' ? 'bg-warn-50' : 'bg-error-50', t.text)}>${fmtRatio(r)}</span>
       <div class="whitespace-nowrap text-end"><p class="text-[13px] font-bold text-muted">מה הוא משלם</p>${priceSlot}</div>
     </div>
-    <div class="relative mt-7 flex flex-col gap-1.5">
-      <span class="absolute -top-6 whitespace-nowrap text-[12px] font-bold text-muted" style=${{ insetInlineStart: pct(target), transform: 'translateX(50%)' }}>היעד: פי 2</span>
-      <span class="flex h-3.5 overflow-hidden rounded-full bg-canvas ring-1 ring-line">
-        <span class=${cx('block h-full transition-all duration-500', t.bar)} style=${{ width: pct(comps) }}></span>
-        <span class=${cx('block h-full opacity-50 transition-all duration-500', t.bar)} style=${{ width: pct(bonus) }}></span>
+    <div class="relative mt-9">
+      <span class="absolute leading-none transition-all duration-500" style=${{ insetInlineStart: pos(r), bottom: 'calc(100% + 10px)', transform: 'translateX(50%)' }}>
+        <span class=${cx('block whitespace-nowrap rounded-full px-2.5 py-0.5 font-display text-[14px] font-black tabular-nums text-white', tone.dot)}>${fmtRatio(r)}</span>
       </span>
-      <span class="h-3.5 overflow-hidden rounded-full bg-canvas ring-1 ring-line"><span class="block h-full rounded-full bg-ink/70 transition-all duration-500" style=${{ width: pct(price) }}></span></span>
-      <span class="pointer-events-none absolute -bottom-1 -top-1 w-0 border-s-2 border-dashed border-ink/50" style=${{ insetInlineStart: pct(target) }}></span>
+      <div class="flex h-3 gap-1">${zones.map(([id, cls]) => html`<span key=${id} class=${cx('h-full flex-1 rounded-full', cls)}></span>`)}</div>
+      <span class=${cx('absolute top-1/2 h-5 w-5 rounded-full ring-[3px] ring-white shadow transition-all duration-500', tone.dot)} style=${{ insetInlineStart: pos(r), transform: 'translate(50%, -50%)' }}></span>
     </div>
-    <p class=${cx('mt-2.5 text-[15px] font-bold', t.text)}>הלקוח מקבל ${fmtRatio(r)} ממה שהוא משלם. ${tone === 'good' ? 'ההצעה מעל היעד.' : `עוד ${fmt(gap)} של ערך, ומגיעים ליעד.`}</p>
+    <div class="mt-1.5 flex text-center text-[12px] leading-tight text-muted">
+      <span class="flex-1">מתחת למינימום</span>
+      <span class="flex-1"><b class="block text-ink">פי 2</b>המינימום</span>
+      <span class="flex-1"><b class="block text-ink">פי ${AIM} ומעלה</b>לכאן שואפים</span>
+    </div>
+    <p class=${cx('mt-3 text-[15px] font-bold', tone.text)}>הלקוח מקבל ${fmtRatio(r)} ממה שהוא משלם. ${line}</p>
     ${foot}
   </div>`;
 }

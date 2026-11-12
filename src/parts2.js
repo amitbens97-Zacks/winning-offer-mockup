@@ -22,7 +22,7 @@ export function ValueScreen({ s, set, aside, onPrice, onSuggest, busyId }) {
     <span class="min-w-0 flex-1 text-muted">הוא אומר לעצמו: <b class="font-semibold text-ink">"${p?.text}"</b></span>
     <span class=${cx('shrink-0 rounded-full px-2 py-0.5 text-[12px] font-bold', on ? 'bg-money-50 text-money' : 'bg-warn-50 text-warn')}>${on ? 'יש לזה תשובה' : 'עוד פתוח'}</span>
   </div>`;
-  return html`<${Screen} title=${['שווה ', 'הרבה יותר', ' מהמחיר?']} sub='הלקוח צריך להרגיש שהוא מקבל הרבה יותר ממה שהוא משלם: פי 2 לפחות. לא מורידים מחיר, מוסיפים ערך.' aside=${aside}>
+  return html`<${Screen} title=${['שווה ', 'הרבה יותר', ' מהמחיר?']} sub='הלקוח צריך להרגיש שהוא מקבל הרבה יותר ממה שהוא משלם. פי 2 זה המינימום, ושואפים ליותר. לא מורידים מחיר, מוסיפים ערך.' aside=${aside}>
     <div class="top-0 z-[2] -mx-2 bg-canvas/95 px-2 pb-3 pt-1 backdrop-blur md:sticky">
       <${ValueMeter}
         value=${total(s)}
