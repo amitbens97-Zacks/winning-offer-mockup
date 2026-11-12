@@ -25,30 +25,46 @@ export function Opening({ onReview }) {
   </div>`;
 }
 
-// The idea of the step in one picture, as a simple equation: what he gets (the result, the bonuses,
-// the guarantee, stacked up) is bigger than what he pays (one small price tag).
-// The blocks land one by one, then the sign and the two lines under it. A tap plays it again.
+// The idea of the step in one picture, as an equation read left to right like any math:
+// what he gets (the result, the bonuses, the guarantee, stacked up, on the left) > what he pays
+// (one small price tag, on the right). The sign sits in a circle so it reads as "greater than",
+// not as an arrow. The blocks land one by one, the tag swings in, then the sign, the sparkles and
+// the labels. A tap plays it again.
 function Equation() {
   const [run, setRun] = useState(0);
   const blocks = [
-    ['התוצאה', 'w-[132px] md:w-[150px]', 0.2],
-    ['בונוסים', 'w-[118px] md:w-[134px]', 0.45],
-    ['הבטחה', 'w-[104px] md:w-[118px]', 0.7],
+    ['התוצאה', 'target', 'w-[120px] md:w-[164px]', 0.2],
+    ['בונוסים', 'gift', 'w-[108px] md:w-[148px]', 0.45],
+    ['הבטחה', 'shield-check', 'w-[96px] md:w-[132px]', 0.7],
   ];
-  return html`<div key=${run} onClick=${() => setRun((r) => r + 1)} aria-hidden="true" class="paper mx-auto w-full max-w-[440px] cursor-pointer rounded-[22px] px-4 pb-6 pt-7 md:px-6 md:pt-8">
-    <div class="grid grid-cols-[1fr_auto_1fr] items-end gap-x-2 md:gap-x-4">
-      <div class="flex flex-col-reverse items-center gap-1.5">
-        ${blocks.map(([label, w, d]) => html`<span key=${label} class=${cx('eq-drop grid h-11 place-items-center rounded-xl bg-brand-600 font-display text-[17px] font-bold text-white shadow-sm', w)} style=${{ animationDelay: `${d}s` }}>${label}</span>`)}
-      </div>
-      <svg viewBox="0 0 40 60" class="eq-sign mb-8 h-14 w-9 text-ink" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M33 8 L8 30 L33 52" /></svg>
-      <div class="flex justify-center">
-        <span class="relative inline-flex h-11 -rotate-6 items-center rounded-lg border-2 border-ink/70 bg-white pe-3 ps-6 font-display text-[18px] font-black tabular-nums">
-          <span class="absolute start-2 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full ring-2 ring-ink/70"></span>${fmt(CORE.price)}
+  const cols = 'grid grid-cols-[1fr_auto_1fr] gap-x-1 md:gap-x-3';
+  return html`<div key=${run} onClick=${() => setRun((r) => r + 1)} aria-hidden="true" class="paper relative mx-auto w-full max-w-[460px] cursor-pointer overflow-hidden rounded-[24px] px-3 pb-5 pt-9 md:px-6 md:pt-10">
+    <div class=${cx(cols, 'items-end')}>
+      <div class="flex justify-center pb-2">
+        <span class="eq-tag block w-[104px] md:w-[124px]">
+          <svg viewBox="0 0 124 64" class="w-full overflow-visible" style="font-family: Rubik, Assistant, sans-serif">
+            <path d="M24 34 C 12 22, 6 14, 2 2" fill="none" stroke="#5f6775" stroke-width="1.6" stroke-linecap="round" />
+            <path d="M34 8 H112 a7 7 0 0 1 7 7 V49 a7 7 0 0 1 -7 7 H34 L13 32 Z" fill="#fffefb" stroke="#2d3e66" stroke-width="2.4" stroke-linejoin="round" filter="url(#pencil-rough)" />
+            <circle cx="27" cy="32" r="4.2" fill="#f4f1ea" stroke="#2d3e66" stroke-width="2" />
+            <text x="76" y="39" text-anchor="middle" direction="ltr" font-size="19" font-weight="900" fill="#1a2b52">${fmt(CORE.price)}</text>
+          </svg>
         </span>
       </div>
-      <p class="eq-line mt-4 text-center leading-tight"><b class="block font-display text-[18px]">מה מקבלים</b><span class="text-[14px] font-bold text-money">שווה הרבה יותר</span></p>
-      <span></span>
-      <p class="eq-line mt-4 text-center leading-tight"><b class="block font-display text-[18px]">מה משלמים</b><span class="text-[14px] text-muted">מה שהוא משלם</span></p>
+      <span class="eq-sign mb-[52px] grid h-12 w-12 place-items-center rounded-full bg-white shadow-[0_8px_18px_-10px_rgba(0,40,120,0.5)] ring-2 ring-brand-200 md:mb-[60px] md:h-14 md:w-14">
+        <svg viewBox="0 0 40 40" class="h-6 w-6 text-brand-900 md:h-7 md:w-7" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 8 L30 20 L11 32" /></svg>
+      </span>
+      <div class="relative flex flex-col-reverse items-center gap-1.5">
+        <span class="absolute inset-x-0 bottom-0 top-6 rounded-full bg-brand-100 blur-2xl"></span>
+        ${blocks.map(([label, icon, w, d]) => html`<span key=${label} class=${cx('eq-drop relative flex h-11 items-center justify-center gap-1.5 rounded-xl border-b-4 border-brand-900 bg-brand-600 font-display text-[15px] font-bold text-white shadow-md md:h-12 md:gap-2 md:text-[17px]', w)} style=${{ animationDelay: `${d}s` }}><${Icon} name=${icon} size=${17} />${label}</span>`)}
+        <${Icon} name="sparkle" size=${18} class="eq-spark absolute -top-5 start-1 text-gold" />
+        <${Icon} name="sparkle" size=${12} class="eq-spark absolute -top-1 end-0 text-gold [animation-delay:1.35s]" />
+      </div>
+    </div>
+    <svg viewBox="0 0 400 8" preserveAspectRatio="none" class="h-2 w-full overflow-visible text-ink/50" style="filter: url(#pencil-rough)"><path d="M6 4 Q 100 2 200 4 T 394 4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /></svg>
+    <div class=${cx(cols, 'eq-line mt-3')}>
+      <p class="text-center leading-tight"><b class="block font-display text-[17px] md:text-[19px]">מה משלמים</b><span class="text-[13px] text-muted md:text-[14px]">מה שהוא משלם</span></p>
+      <span class="w-12 md:w-14"></span>
+      <p class="text-center leading-tight"><b class="block font-display text-[17px] md:text-[19px]">מה מקבלים</b><span class="mt-1 inline-block rounded-full bg-money-50 px-2.5 py-0.5 text-[13px] font-bold text-money md:text-[14px]">שווה הרבה יותר</span></p>
     </div>
   </div>`;
 }
