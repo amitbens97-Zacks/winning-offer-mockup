@@ -1,25 +1,25 @@
 // Step 8 "בניית הצעה מנצחת", built on the offer-builder system prompt
 // (doc/offer-builder-prompt.md) and the method "איך בונים הצעה שקשה לסרב לה" (doc/offer-method.pdf).
 // Screens: opening → (review: an offer the user already has) → outcome → problems → matrix →
-// components → value (price + bonuses) → guarantee → urgency → name → check → done.
+// components → value (price + bonuses) → guarantee → urgency → name → check → done → offers ("ההצעות שלי").
 // One question per screen, one short instruction. The primary button names the next screen,
 // and on wide screens "ההצעה שלך" beside it shows what is done, what is now and what is next.
 // Link params: ?screen=<id>, ?user=f, ?embed = phone layout. Shift+D opens the developer notes.
 import { html, render, useState, useEffect, useRef, Icon } from './lib.js';
 import { PartnerBubble, Progress, TopBar, BottomBar, Status, PrimaryButton, Button, Toast } from './components.js';
-import { STEP, PARTS, EXISTING_OFFER, GUARANTEE_DRAFTS, CANCEL_TEXT, NAMES, g } from './data.js';
-import { freshState, draftBonuses, openObstacles, guaranteeOK } from './calc.js';
+import { STEP, PARTS, EXISTING_OFFER, GUARANTEE_DRAFTS, CANCEL_TEXT, NAMES, CORE, g } from './data.js';
+import { freshState, draftBonuses, openObstacles, guaranteeOK, whatsappText } from './calc.js';
 import * as ai from './ai.js';
 import { hasAI } from './ai.js';
 import { OutcomeScreen, ProblemsScreen, MatrixScreen, ComponentsScreen } from './parts.js';
 import { ValueScreen, GuaranteeScreen, UrgencyScreen, NameScreen, CheckScreen } from './parts2.js';
-import { Opening, Review, reviewByRules, JourneyCard, Done } from './step.js';
+import { Opening, Review, reviewByRules, JourneyCard, Done, Offers, productOf } from './step.js';
 import { DevPanel } from './devnotes.js';
 import { EMBED, IS_PHONE, readView, saveView, writeHandoff, takeHandoff, applyPhoneViewport, ViewToggle, PhonePreview } from './viewswitch.js';
 
 const params = new URLSearchParams(location.search);
 const FLOW = ['outcome', 'problems', 'matrix', 'components', 'value', 'guarantee', 'urgency', 'name', 'check'];
-const SCREENS = ['opening', 'review', ...FLOW, 'done'];
+const SCREENS = ['opening', 'review', ...FLOW, 'done', 'offers'];
 const PART_OF = { outcome: 0, problems: 1, matrix: 2, components: 2, value: 3, guarantee: 4, urgency: 4, name: 5, check: 5 };
 const FIRST_OF_PART = ['outcome', 'problems', 'matrix', 'value', 'guarantee', 'name'];
 // What the primary button says: where it goes next.
@@ -38,6 +38,7 @@ const SHARK_LINE = {
   urgency: 'דחיפות מזויפת נשרפת פעם אחת. אמיתית עובדת כל חודש.',
   name: 'השם הוא הדבר הראשון שהלקוח שומע. שיגיד לו "זה בשבילך".',
   check: 'לא צריך עשר מתוך עשר כדי לצאת לדרך. צריך לדעת מה חסר.',
+  offers: 'הצעה לכל מוצר בסל. כל אחת נבנית סביב התוצאה שהמוצר הזה נותן.',
 };
 
 // A problem the user added, without a model: a simple "איך ל..." and a place on the road by its lens.
@@ -51,6 +52,15 @@ const bonusByRules = (p) => ({
   note: 'חוסכת כ-4 שעות של ניסוי וטעייה, × 50 ₪',
 });
 
+// A new offer for a product from the basket starts from its price and payment terms.
+// (In the system the shark drafts the outcome, problems and items for that product.)
+const offerState = (pid) => {
+  const pr = productOf(pid);
+  return { ...freshState(), price: pr.price, pay: pr.pay === 'monthly' || pr.monthly ? 'monthly' : 'start' };
+};
+// Shown only when the mockup opens straight on "ההצעות שלי": a second offer still being built.
+const DEMO_OFFER = () => ({ id: 'o-demo', pid: 'p2', done: false, at: Date.now() - 2 * 864e5, s: { ...offerState('p2'), reached: 1 } });
+
 function App({ view: shellView, onViewChange }) {
   const handoff = useRef(takeHandoff()).current;
   const [screen, setScreen] = useState(handoff?.screen || startScreen());
@@ -62,6 +72,10 @@ function App({ view: shellView, onViewChange }) {
   const [dev, setDev] = useState(false);
   const [unread, setUnread] = useState(true);
   const [minAdded, setMinAdded] = useState(false);
+  // "ההצעות שלי": every offer of this step. The one being built lives in s; the others keep a copy.
+  const [offers, setOffers] = useState([{ id: 'o1', pid: CORE.id, done: false, at: Date.now() }]);
+  const [cur, setCur] = useState('o1');
+  const [picker, setPicker] = useState(false);
   const timers = useRef({});
   const sRef = useRef(s);
   sRef.current = s;
@@ -73,13 +87,15 @@ function App({ view: shellView, onViewChange }) {
 
   // A deep link straight into a later screen still needs what earlier screens prepare.
   useEffect(() => {
-    if (PART_OF[screen] != null || screen === 'done') {
-      const reach = screen === 'done' ? PARTS.length - 1 : PART_OF[screen];
+    const end = screen === 'done' || screen === 'offers';
+    if (PART_OF[screen] != null || end) {
+      const reach = end ? PARTS.length - 1 : PART_OF[screen];
       // Past the name screen, a link shows the offer with the shark's first name picked.
-      const named = (x) => (['check', 'done'].includes(screen) && !x.name.text ? { ...x, name: { id: NAMES[0].id, text: NAMES[0].text } } : x);
+      const named = (x) => (['check', 'done', 'offers'].includes(screen) && !x.name.text ? { ...x, name: { id: NAMES[0].id, text: NAMES[0].text } } : x);
       // A link past the price screen shows the bonuses already switched on.
-      setS((x) => prep(named({ ...x, reached: Math.max(x.reached, reach) }), screen, screen !== 'value'));
+      setS((x) => prep(named({ ...x, reached: Math.max(x.reached, reach) }), end ? 'done' : screen, screen !== 'value'));
     }
+    if (end) setOffers((os) => [...os.map((o) => ({ ...o, done: true })), ...(screen === 'offers' ? [DEMO_OFFER()] : [])]);
   }, []);
 
   useEffect(() => {
@@ -135,7 +151,48 @@ function App({ view: shellView, onViewChange }) {
   }
   const go = (to) => {
     if (PART_OF[to] != null) setS((x) => prep({ ...x, reached: Math.max(x.reached, PART_OF[to]) }, to));
+    if (to === 'done') setOffers((os) => os.map((o) => (o.id === cur ? { ...o, done: true, at: Date.now() } : o)));
+    if (to === 'offers') setPicker(false);
     setScreen(to);
+  };
+
+  // ---------- "ההצעות שלי" ----------
+  const offerList = offers.map((o) => (o.id === cur ? { ...o, s } : o));
+  // Switch to another offer: keep a copy of the one being built, load the other.
+  const load = (id) => {
+    if (id === cur) return;
+    const o = offers.find((x) => x.id === id);
+    setOffers((os) => os.map((x) => (x.id === cur ? { ...x, s: sRef.current } : x)));
+    setS(o.s);
+    setCur(id);
+  };
+  const openOffer = (id) => (load(id), setScreen('done'));
+  const editOffer = (id) => {
+    const o = offerList.find((x) => x.id === id);
+    load(id);
+    go(o.done ? 'outcome' : FIRST_OF_PART[o.s.reached]);
+  };
+  const copyOffer = async (id) => {
+    try {
+      await navigator.clipboard.writeText(whatsappText(offerList.find((x) => x.id === id).s));
+    } catch {}
+    notify('הגרסה לוואטסאפ הועתקה', 'copy');
+  };
+  const pdfOffer = (id) => {
+    const o = offerList.find((x) => x.id === id);
+    notify(`ה-PDF של "${o.s.name.text || productOf(o.pid).name}" שמור בקבצים`, 'folder-open');
+  };
+  const newOffer = (pid) => {
+    const id = `o${Date.now()}`;
+    const ns = offerState(pid);
+    setOffers((os) => [...os.map((x) => (x.id === cur ? { ...x, s: sRef.current } : x)), { id, pid, done: false, at: Date.now(), s: ns }]);
+    setS(ns);
+    setCur(id);
+    setPicker(false);
+    setReview({ text: EXISTING_OFFER, result: null });
+    setNames(null);
+    setScreen('outcome');
+    notify(`הכריש מכין טיוטות ל"${productOf(pid).name}"`, 'sparkles');
   };
   const next = () => go(FLOW[FLOW.indexOf(screen) + 1] || 'done');
   const back = () => {
@@ -144,6 +201,7 @@ function App({ view: shellView, onViewChange }) {
     else if (screen === 'outcome') go(review.result ? 'review' : 'opening');
     else if (screen === 'review') go('opening');
     else if (screen === 'done') go('check');
+    else if (screen === 'offers') go('done');
   };
 
   // ---------- the shark's drafts (Claude with the prompt, or the drafts written in advance) ----------
@@ -249,6 +307,9 @@ function App({ view: shellView, onViewChange }) {
     setReview({ text: EXISTING_OFFER, result: null });
     setNames(null);
     setMinAdded(false);
+    setOffers([{ id: 'o1', pid: CORE.id, done: false, at: Date.now() }]);
+    setCur('o1');
+    setPicker(false);
     setDev(false);
     setScreen('opening');
     notify('התחלנו מההתחלה', 'rotate-ccw');
@@ -260,7 +321,7 @@ function App({ view: shellView, onViewChange }) {
   const devBtn = html`<button type="button" onClick=${() => setDev((d) => !d)} title="הערות למפתחים (Shift+D)" aria-label="הערות למפתחים" class="inline-flex h-10 w-10 items-center justify-center rounded-xl text-muted hover:bg-brand-50 hover:text-brand-600 cursor-pointer max-md:hidden"><${Icon} name="code-xml" size=${18} /></button>`;
   const top = html`<${TopBar}
     step=${STEP}
-    progress=${inFlow ? html`<${Progress} parts=${PARTS} current=${part} maxReached=${s.reached} onJump=${(i) => i <= s.reached && go(FIRST_OF_PART[i])} />` : screen === 'done' ? html`<${Progress} parts=${PARTS} current=${PARTS.length - 1} maxReached=${PARTS.length - 1} done onJump=${(i) => go(FIRST_OF_PART[i])} />` : null}
+    progress=${inFlow ? html`<${Progress} parts=${PARTS} current=${part} maxReached=${s.reached} onJump=${(i) => i <= s.reached && go(FIRST_OF_PART[i])} />` : screen === 'done' || screen === 'offers' ? html`<${Progress} parts=${PARTS} current=${PARTS.length - 1} maxReached=${PARTS.length - 1} done onJump=${(i) => go(FIRST_OF_PART[i])} />` : null}
     tools=${html`${!EMBED && html`<${ViewToggle} view=${shellView} onChange=${onViewChange} class="max-md:hidden" />`}${devBtn}`}
     onHome=${() => notify('במוק-אפ דף הבית לא פעיל. השלב נשאר פתוח במפה', 'house')}
   />`;
@@ -290,15 +351,19 @@ function App({ view: shellView, onViewChange }) {
             status=${html`<${Status} reason=${!review.text.trim() ? 'חסר טקסט לבדיקה' : null} />`}
             primary=${review.result ? primary('לבנות גרסה משופרת', () => go('outcome')) : primary(busy === 'review' ? 'הכריש קורא...' : 'לבדוק', runReview, { disabled: !review.text.trim() || busy === 'review' })}
           />`
-        : screen === 'done'
-          ? html`<${BottomBar} back=${backBtn} status=${html`<span></span>`} primary=${primary('לשלב הבא', () => notify('השלב הבא נפתח במפה: שלב 9, דף נחיתה', 'arrow-left'))} />`
+        : screen === 'done' || screen === 'offers'
+          ? html`<${BottomBar}
+              back=${screen === 'done' ? backBtn : null}
+              status=${html`<${Status} hint=${screen === 'offers' ? (offers.length === 1 ? 'הצעה אחת' : `${offers.length} הצעות`) : null} />`}
+              primary=${primary('לשלב הבא', () => notify('השלב הבא נפתח במפה: שלב 9, דף נחיתה', 'arrow-left'))}
+            />`
           : html`<${BottomBar}
               back=${backBtn}
               status=${html`<${Status} reason=${reason} hint=${hint} />`}
               primary=${screen === 'check' ? primary('סיום השלב', () => go('done'), { check: true }) : primary(`הבא: ${LABEL[FLOW[FLOW.indexOf(screen) + 1]]}`, next)}
             />`;
 
-  const aside = html`<${JourneyCard} s=${s} part=${part} onGo=${(i) => go(FIRST_OF_PART[i])} />`;
+  const aside = html`<${JourneyCard} s=${s} part=${part} onGo=${(i) => go(FIRST_OF_PART[i])} product=${offers.length > 1 ? productOf(offers.find((o) => o.id === cur).pid).name : null} />`;
   const props = { s, set: setS, aside };
   const body = {
     opening: html`<${Opening} onReview=${() => go('review')} />`,
@@ -312,7 +377,8 @@ function App({ view: shellView, onViewChange }) {
     urgency: html`<${UrgencyScreen} ...${props} />`,
     name: html`<${NameScreen} ...${props} names=${names} onMore=${moreNames} busy=${busy === 'names'} />`,
     check: html`<${CheckScreen} s=${s} aside=${aside} onFix=${(to) => go(to)} />`,
-    done: html`<${Done} s=${s} notify=${notify} minAdded=${minAdded} onAddMin=${() => (setMinAdded(true), notify('"המינימום" נוסף לסל המוצרים', 'package'))} onAnother=${() => notify('במערכת: בוחרים מוצר מהסל, והחלקים מתחילים מחדש עם מה שכבר ידוע', 'plus')} />`,
+    done: html`<${Done} s=${s} notify=${notify} minAdded=${minAdded} onAddMin=${() => (setMinAdded(true), notify('"המינימום" נוסף לסל המוצרים', 'package'))} count=${offers.length} onOffers=${() => go('offers')} onAnother=${() => (go('offers'), setPicker(true))} />`,
+    offers: html`<${Offers} list=${offerList} cur=${cur} picker=${picker} setPicker=${setPicker} onOpen=${openOffer} onEdit=${editOffer} onCopy=${copyOffer} onPdf=${pdfOffer} onNew=${newOffer} />`,
   }[screen];
 
   return html`<div class="fb-notebook flex h-dvh flex-col text-ink" dir="rtl">

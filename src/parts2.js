@@ -5,7 +5,7 @@ import { InlineEdit, Button } from './components.js';
 import { inputCls } from './ui.js';
 import { Screen, MoneyEdit, ValueMeter, How, StateIcon } from './kit.js';
 import { USER, CLIENT_FILE, G_TYPES, Z_CHIPS, URGENCY, NAMES, CORE, GENDER, g } from './data.js';
-import { total, payLine, capacity, checks, fmt } from './calc.js';
+import { total, compsTotal, bonusTotal, payLine, capacity, checks, fmt } from './calc.js';
 
 const pickF = (o, k) => (GENDER === 'f' && o[`${k}F`]) || o[k];
 const chip = (on) => cx('h-9 rounded-full border-[1.5px] px-3.5 text-[14px] font-bold transition cursor-pointer', on ? 'border-brand-600 bg-brand-100 text-brand-600' : 'border-line bg-white hover:border-brand-300');
@@ -16,10 +16,18 @@ export function ValueScreen({ s, set, aside, onPrice, onSuggest, busyId }) {
   const list = s.bonuses || [];
   const setB = (id, p) => set((x) => ({ ...x, bonuses: x.bonuses.map((b) => (b.id === id ? { ...b, ...p } : b)) }));
   const pOf = (pid) => s.problems.find((p) => p.id === pid);
-  return html`<${Screen} title=${['שווה ', 'הרבה יותר', ' מהמחיר?']} sub=${g('לא מורידים מחיר, מוסיפים ערך. הדלק בונוסים וראה את המד זז.', 'לא מורידים מחיר, מוסיפים ערך. הדליקי בונוסים וראי את המד זז.')} aside=${aside}>
-    <div class="sticky top-0 z-[2] -mx-2 bg-canvas/95 px-2 pb-3 pt-1 backdrop-blur">
+  // Each bonus card starts with the client's sentence it answers, so it is clear what the bonus is for.
+  const said = (p, on) => html`<div class="flex items-start gap-2 text-[14px]">
+    <${Icon} name="message-circle" size=${16} class="mt-0.5 shrink-0 text-muted" />
+    <span class="min-w-0 flex-1 text-muted">הוא אומר לעצמו: <b class="font-semibold text-ink">"${p?.text}"</b></span>
+    <span class=${cx('shrink-0 rounded-full px-2 py-0.5 text-[12px] font-bold', on ? 'bg-money-50 text-money' : 'bg-warn-50 text-warn')}>${on ? 'יש לזה תשובה' : 'עוד פתוח'}</span>
+  </div>`;
+  return html`<${Screen} title=${['שווה ', 'הרבה יותר', ' מהמחיר?']} sub='הלקוח צריך להרגיש שהוא מקבל הרבה יותר ממה שהוא משלם: פי 2 לפחות. לא מורידים מחיר, מוסיפים ערך.' aside=${aside}>
+    <div class="top-0 z-[2] -mx-2 bg-canvas/95 px-2 pb-3 pt-1 backdrop-blur md:sticky">
       <${ValueMeter}
         value=${total(s)}
+        comps=${compsTotal(s)}
+        bonus=${bonusTotal(s)}
         price=${s.price}
         priceSlot=${html`<${MoneyEdit} big value=${s.price} onSave=${onPrice} />`}
         foot=${html`<div class="mt-2 flex flex-wrap items-center gap-2 border-t border-line pt-2 text-[14px] text-muted">
@@ -29,28 +37,35 @@ export function ValueScreen({ s, set, aside, onPrice, onSuggest, busyId }) {
         </div>`}
       />
     </div>
-    <p class="mb-2 mt-3 text-[15px] font-bold">בונוס לכל דבר שעוד עוצר אותו</p>
-    <div class="flex flex-col gap-2">
-      ${list.length === 0 && html`<p class="text-[15px] text-muted">הרכיבים כבר פותרים הכול. אין צורך בבונוס.</p>`}
-      ${list.map((b) => {
-        const p = pOf(b.for);
-        if (b.empty && !b.name)
-          return html`<div key=${b.id} class="flex flex-wrap items-center gap-3 rounded-2xl border-[1.5px] border-dashed border-brand-300 bg-white p-3.5">
-            <span class="min-w-0 flex-1 text-[15px] text-muted">"${p?.text}"</span>
-            <${Button} variant="mini" onClick=${() => onSuggest(b)} disabled=${busyId === b.id}><${Icon} name="sparkles" size=${15} />${busyId === b.id ? 'הכריש חושב...' : 'הכריש יציע בונוס'}<//>
+    <section class="mt-4">
+      <h2 class="flex items-center gap-2 font-display text-[19px] font-bold"><${Icon} name="gift" size=${19} class="text-brand-600" />הבונוסים: תשובה למה שעוד עוצר אותו</h2>
+      <p class="mb-3 mt-1 max-w-[60ch] text-[15px] text-muted">בונוס הוא לא מתנה סתם. כל בונוס עונה על משפט אחד של הלקוח שהרכיבים עוד לא פתרו, וכך הוא גם מוריד סיבה להגיד לא וגם מוסיף ערך, בלי לגעת במחיר.</p>
+      <div class="flex flex-col gap-2.5">
+        ${list.length === 0 && html`<p class="text-[15px] text-muted">הרכיבים כבר עונים על כל המשפטים של הלקוח. אין צורך בבונוס.</p>`}
+        ${list.map((b) => {
+          const p = pOf(b.for);
+          if (b.empty && !b.name)
+            return html`<div key=${b.id} class="rounded-2xl border-[1.5px] border-dashed border-brand-300 bg-white p-3.5">
+              ${said(p, false)}
+              <div class="mt-2.5 border-t border-dashed border-line pt-2.5"><${Button} variant="mini" onClick=${() => onSuggest(b)} disabled=${busyId === b.id}><${Icon} name="sparkles" size=${15} />${busyId === b.id ? 'הכריש חושב...' : 'הכריש יציע בונוס שעונה על זה'}<//></div>
+            </div>`;
+          return html`<div key=${b.id} class=${cx('rounded-2xl border-[1.5px] p-3.5 transition', b.on ? 'border-line bg-white' : 'border-dashed border-line bg-transparent')}>
+            ${said(p, b.on)}
+            <div class="mt-2.5 flex items-center gap-3 border-t border-dashed border-line pt-2.5">
+              <button type="button" role="switch" aria-checked=${b.on} aria-label=${b.on ? 'להוציא את הבונוס' : 'להכניס את הבונוס'} onClick=${() => setB(b.id, { on: !b.on })} class=${cx('relative h-7 w-12 shrink-0 rounded-full transition-colors cursor-pointer', b.on ? 'bg-brand-600' : 'bg-line')}>
+                <span class=${cx('absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all', b.on ? 'right-6' : 'right-1')}></span>
+              </button>
+              <div class=${cx('min-w-0 flex-1', !b.on && 'opacity-60')}>
+                <span class="block text-[12px] font-bold text-brand-600">הבונוס שעונה על זה</span>
+                <b class="block font-display text-[16px] leading-tight"><${InlineEdit} value=${b.name} onSave=${(v) => setB(b.id, { name: v })} placeholder="שם לבונוס" /></b>
+                ${b.what && html`<span class="mt-0.5 block text-[13px] leading-snug text-muted">${b.what}</span>`}
+              </div>
+              <span class=${cx('shrink-0', !b.on && 'opacity-60')}><${MoneyEdit} value=${b.value} onSave=${(v) => setB(b.id, { value: v })} /></span>
+            </div>
           </div>`;
-        return html`<div key=${b.id} class=${cx('flex items-center gap-3 rounded-2xl border-[1.5px] p-3.5 transition', b.on ? 'border-line bg-white' : 'border-dashed border-line bg-transparent')}>
-          <button type="button" role="switch" aria-checked=${b.on} aria-label=${b.on ? 'להוציא את הבונוס' : 'להכניס את הבונוס'} onClick=${() => setB(b.id, { on: !b.on })} class=${cx('relative h-7 w-12 shrink-0 rounded-full transition-colors cursor-pointer', b.on ? 'bg-brand-600' : 'bg-line')}>
-            <span class=${cx('absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all', b.on ? 'right-6' : 'right-1')}></span>
-          </button>
-          <div class=${cx('min-w-0 flex-1', !b.on && 'opacity-60')}>
-            <b class="block font-display text-[16px] leading-tight"><${InlineEdit} value=${b.name} onSave=${(v) => setB(b.id, { name: v })} placeholder="שם לבונוס" /></b>
-            <span class="block truncate text-[13px] text-muted">פותר: "${p?.text}"</span>
-          </div>
-          <span class=${cx('shrink-0', !b.on && 'opacity-60')}><${MoneyEdit} value=${b.value} onSave=${(v) => setB(b.id, { value: v })} /></span>
-        </div>`;
-      })}
-    </div>
+        })}
+      </div>
+    </section>
   <//>`;
 }
 

@@ -3,12 +3,12 @@
 import { html, useState, useEffect, Icon, cx, confetti, PencilLine, PencilCheck } from './lib.js';
 import { Button, Note } from './components.js';
 import { inputCls } from './ui.js';
-import { CORE, USER, REVIEW_DIMS, SAVED, PARTS, PART_WHY, g } from './data.js';
+import { CORE, USER, REVIEW_DIMS, SAVED, PARTS, PART_WHY, BASKET, g } from './data.js';
 import { activeComps, activeProblems, bonusList, total, fmt, fmtRatio, ratio, payLine, guaranteeLine, guaranteeOK, capacity, minimum, whatsappText, missing } from './calc.js';
 
 // ---------- opening ----------
 export function Opening({ onReview }) {
-  return html`<div class="mx-auto grid min-h-full max-w-[1080px] items-center gap-6 px-4 py-8 md:grid-cols-2 md:gap-12 md:px-8">
+  return html`<div class="mx-auto grid min-h-full max-w-[1080px] items-center gap-6 px-4 py-8 max-md:pb-24 md:grid-cols-2 md:gap-12 md:px-8">
     <div>
       <p class="fb-eyebrow mb-2">שלב 8 · בניית מותג אישי</p>
       <h1 class="fb-h1 mb-3 text-[34px] leading-[1.1] md:text-[46px]">הצעה <span class="fb-marker">שקשה לסרב לה</span></h1>
@@ -21,54 +21,35 @@ export function Opening({ onReview }) {
       </ol>
       <button type="button" onClick=${onReview} class="inline-flex items-center gap-2 text-[15px] font-bold text-brand-600 hover:underline cursor-pointer"><${Icon} name="file-search" size=${17} />יש לי כבר הצעה</button>
     </div>
-    <${Scale} />
+    <${Equation} />
   </div>`;
 }
 
-// The idea of the step in one picture: what goes on the value side outweighs the price.
-// Blocks drop onto the value pan one by one, then the beam tips.
-function Scale() {
-  const [run, setRun] = useState(0); // a tap on the picture plays it again
+// The idea of the step in one picture, as a simple equation: what he gets (the result, the bonuses,
+// the guarantee, stacked up) is bigger than what he pays (one small price tag).
+// The blocks land one by one, then the sign and the two lines under it. A tap plays it again.
+function Equation() {
+  const [run, setRun] = useState(0);
   const blocks = [
-    { y: 206, w: 92, label: 'התוצאה', d: 0.25 },
-    { y: 178, w: 80, label: 'בונוסים', d: 0.6 },
-    { y: 150, w: 68, label: 'הבטחה', d: 0.95 },
+    ['התוצאה', 'w-[132px] md:w-[150px]', 0.2],
+    ['בונוסים', 'w-[118px] md:w-[134px]', 0.45],
+    ['הבטחה', 'w-[104px] md:w-[118px]', 0.7],
   ];
-  return html`<div key=${run} class="relative mx-auto w-full max-w-[470px] cursor-pointer" aria-hidden="true" onClick=${() => setRun((r) => r + 1)}>
-    <svg viewBox="0 0 420 320" class="w-full" style="font-family: Rubik, Assistant, sans-serif">
-      <g filter="url(#pencil-rough)" stroke="#2d3e66" stroke-width="3" stroke-linecap="round" fill="none">
-        <path d="M210 70 L210 282" />
-        <path d="M168 288 Q210 274 252 288" />
-        <path d="M150 292 L270 292" />
-      </g>
-      <g class="sc-beam">
-        <path d="M72 70 L348 70" stroke="#0038b8" stroke-width="5" stroke-linecap="round" />
-        <circle cx="210" cy="70" r="9" fill="#fffefb" stroke="#0038b8" stroke-width="3" />
-      </g>
-      <g class="sc-left">
-        <g stroke="#a0a6af" stroke-width="1.6"><path d="M72 70 L34 228" /><path d="M72 70 L110 228" /></g>
-        <path d="M24 228 Q72 254 120 228 Z" fill="#e9effb" stroke="#2d3e66" stroke-width="2.5" filter="url(#pencil-rough)" />
-        <g transform="translate(72 206) rotate(-4)">
-          <rect x="-40" y="-16" width="80" height="30" rx="8" fill="#fffefb" stroke="#2d3e66" stroke-width="2" />
-          <text x="0" y="5" text-anchor="middle" font-size="15" font-weight="800" fill="#2d3e66">${fmt(CORE.price)}</text>
-        </g>
-        <text x="72" y="276" text-anchor="middle" font-size="14" font-weight="700" fill="#5f6775">מה משלמים</text>
-      </g>
-      <g class="sc-right">
-        <g stroke="#a0a6af" stroke-width="1.6"><path d="M348 70 L298 228" /><path d="M348 70 L398 228" /></g>
-        <path d="M288 228 Q348 256 408 228 Z" fill="#e9effb" stroke="#2d3e66" stroke-width="2.5" filter="url(#pencil-rough)" />
-        ${blocks.map((b) => html`<g key=${b.label} class="sc-drop" style=${{ animationDelay: `${b.d}s` }}>
-          <rect x=${348 - b.w / 2} y=${b.y} width=${b.w} height="26" rx="6" fill="#0038b8" />
-          <rect x=${348 - b.w / 2} y=${b.y} width=${b.w} height="26" rx="6" fill="url(#pencil-hatch-light)" />
-          <text x="348" y=${b.y + 18} text-anchor="middle" font-size="14" font-weight="700" fill="#fff">${b.label}</text>
-        </g>`)}
-        <text x="348" y="276" text-anchor="middle" font-size="14" font-weight="700" fill="#5f6775">מה מקבלים</text>
-      </g>
-    </svg>
-    <span class="sc-note pointer-events-none absolute -top-5 right-0 flex flex-col items-start">
-      <span class="hand rotate-[-4deg] text-[30px] leading-none">שווה יותר ממה שעולה</span>
-      <svg viewBox="0 0 40 48" class="ms-[52px] h-11 w-9 text-[var(--sky-text)]" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4 C 6 18, 10 30, 22 42" /><path d="M12 38 L22 43 L25 32" /></svg>
-    </span>
+  return html`<div key=${run} onClick=${() => setRun((r) => r + 1)} aria-hidden="true" class="paper mx-auto w-full max-w-[440px] cursor-pointer rounded-[22px] px-4 pb-6 pt-7 md:px-6 md:pt-8">
+    <div class="grid grid-cols-[1fr_auto_1fr] items-end gap-x-2 md:gap-x-4">
+      <div class="flex flex-col-reverse items-center gap-1.5">
+        ${blocks.map(([label, w, d]) => html`<span key=${label} class=${cx('eq-drop grid h-11 place-items-center rounded-xl bg-brand-600 font-display text-[17px] font-bold text-white shadow-sm', w)} style=${{ animationDelay: `${d}s` }}>${label}</span>`)}
+      </div>
+      <svg viewBox="0 0 40 60" class="eq-sign mb-8 h-14 w-9 text-ink" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M33 8 L8 30 L33 52" /></svg>
+      <div class="flex justify-center">
+        <span class="relative inline-flex h-11 -rotate-6 items-center rounded-lg border-2 border-ink/70 bg-white pe-3 ps-6 font-display text-[18px] font-black tabular-nums">
+          <span class="absolute start-2 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full ring-2 ring-ink/70"></span>${fmt(CORE.price)}
+        </span>
+      </div>
+      <p class="eq-line mt-4 text-center leading-tight"><b class="block font-display text-[18px]">מה מקבלים</b><span class="text-[14px] font-bold text-money">שווה הרבה יותר</span></p>
+      <span></span>
+      <p class="eq-line mt-4 text-center leading-tight"><b class="block font-display text-[18px]">מה משלמים</b><span class="text-[14px] text-muted">מה שהוא משלם</span></p>
+    </div>
   </div>`;
 }
 
@@ -141,9 +122,10 @@ const ROWS = [
   (s) => guaranteeOK(s.guarantee) && s.guarantee.name,
   (s) => s.name.text,
 ];
-export function JourneyCard({ s, part, onGo }) {
+export function JourneyCard({ s, part, onGo, product }) {
   return html`<div class="paper rounded-[18px] p-4">
-    <p class="fb-eyebrow mb-3 !text-[12px]">ההצעה שלך</p>
+    <p class=${cx('fb-eyebrow !text-[12px]', !product && 'mb-3')}>ההצעה שלך</p>
+    ${product && html`<p class="mb-3 truncate text-[13px] font-semibold text-muted">${product}</p>`}
     <ol class="flex flex-col">
       ${PARTS.map((label, i) => {
         const now = i === part;
@@ -201,7 +183,7 @@ export function OfferDoc({ s }) {
 }
 
 // ---------- the finish ----------
-export function Done({ s, notify, onAnother, onAddMin, minAdded }) {
+export function Done({ s, notify, onAnother, onOffers, count, onAddMin, minAdded }) {
   useEffect(() => {
     const t = setTimeout(() => confetti('step'), 250);
     return () => clearTimeout(t);
@@ -220,7 +202,7 @@ export function Done({ s, notify, onAnother, onAddMin, minAdded }) {
     <div class="no-print mb-5 flex flex-wrap items-end justify-between gap-4">
       <div>
         <h1 class="fb-h1 text-[30px] md:text-[38px]">ההצעה <span class="fb-marker">מוכנה</span></h1>
-        <p class="mt-1 text-[16px] text-muted">ערך ${fmtRatio(ratio(s))} מהמחיר, עם הבטחה. נשמרה בקבצים.</p>
+        <p class="mt-1 text-[16px] text-muted">ערך ${fmtRatio(ratio(s))} מהמחיר, עם הבטחה. נשמרה בקבצים וב"ההצעות שלי".</p>
       </div>
       <${Note} tone="white" tilt=${-2} class="fb-badge-note !w-[200px] !pt-7 max-md:hidden">
         <span class="fb-note-kicker">חסכת בשלב הזה</span>
@@ -253,9 +235,75 @@ export function Done({ s, notify, onAnother, onAddMin, minAdded }) {
         </details>
         <button type="button" onClick=${onAnother} class="flex items-center gap-3 rounded-2xl border-[1.5px] border-dashed border-brand-300 bg-white p-4 text-start hover:border-brand-600 cursor-pointer">
           <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-600"><${Icon} name="plus" size=${18} /></span>
-          <b class="text-[15px]">הצעה למוצר נוסף מהסל</b>
+          <span><b class="block text-[15px]">ליצור הצעה נוספת</b><span class="text-[13px] text-muted">למוצר אחר מהסל, או גרסה נוספת</span></span>
+        </button>
+        <button type="button" onClick=${onOffers} class="flex items-center gap-3 rounded-2xl bg-white p-4 text-start ring-1 ring-line hover:ring-brand-300 cursor-pointer">
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-canvas text-brand-600 ring-1 ring-line"><${Icon} name="files" size=${18} /></span>
+          <span class="flex-1"><b class="block text-[15px]">ההצעות שלי</b><span class="text-[13px] text-muted">${count === 1 ? 'הצעה אחת' : `${count} הצעות`}, כל אחת גם כ-PDF בקבצים</span></span>
+          <${Icon} name="chevron-left" size=${18} class="text-muted" />
         </button>
       </div>
+    </div>
+  </div>`;
+}
+
+// ---------- "ההצעות שלי": every offer the user built in this step, in one place ----------
+// It opens at the end of the step, and on every return to the step from the map once one offer is ready.
+// Each offer is also saved as a PDF in the files. "הצעה חדשה" picks a product from the basket.
+const ROLE = { entry: 'מוצר כניסה', bridge: 'מוצר גשר', core: 'מוצר הליבה', premium: 'פרימיום', recurring: 'ליווי חודשי' };
+export const productOf = (pid) => BASKET.find((p) => p.id === pid) || CORE;
+const act = 'inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-[14px] font-bold text-brand-600 hover:bg-brand-50 cursor-pointer';
+export function Offers({ list, cur, picker, setPicker, onOpen, onEdit, onCopy, onPdf, onNew }) {
+  const paid = BASKET.filter((p) => p.price > 0);
+  const date = (at) => new Date(at).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' });
+  return html`<div class="mx-auto max-w-[1020px] px-4 py-6 max-md:pb-24 md:px-8 md:py-8">
+    <h1 class="fb-h1 mb-1.5 text-[28px] md:text-[34px]">ההצעות <span class="fb-marker">שלי</span></h1>
+    <p class="mb-6 max-w-[60ch] text-[17px] text-muted">כל הצעה שבונים נשמרת כאן, וכל אחת גם כ-PDF בקבצים. אפשר לפתוח, לערוך, או לבנות הצעה חדשה.</p>
+    <div class="grid gap-3 md:grid-cols-2">
+      ${list.map((o) => {
+        const pr = productOf(o.pid);
+        const x = o.s;
+        const title = x.name.text || `הצעה ל${pr.name}`;
+        return html`<article key=${o.id} class="flex flex-col rounded-[18px] bg-white p-4 ring-1 ring-line md:p-5">
+          <div class="mb-1 flex items-center gap-2">
+            <span class=${cx('rounded-full px-2 py-0.5 text-[12px] font-bold', o.done ? 'bg-money-50 text-money' : 'bg-warn-50 text-warn')}>${o.done ? 'מוכנה' : `בעבודה · חלק ${x.reached + 1} מתוך ${PARTS.length}`}</span>
+            <span class="ms-auto text-[12px] text-muted">${date(o.at)}</span>
+          </div>
+          <h2 class="font-display text-[20px] font-black leading-tight text-brand-900">${title}</h2>
+          <p class="mt-0.5 text-[14px] text-muted">${pr.name} · ${ROLE[pr.role]}</p>
+          <dl class="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-canvas p-2.5 text-center">
+            <div><dt class="text-[12px] text-muted">מחיר</dt><dd class="font-display text-[16px] font-bold tabular-nums">${fmt(x.price)}</dd></div>
+            <div><dt class="text-[12px] text-muted">ערך</dt><dd class="font-display text-[16px] font-bold tabular-nums text-money">${o.done || x.reached >= 4 ? fmtRatio(ratio(x)) : '-'}</dd></div>
+            <div><dt class="text-[12px] text-muted">הבטחה</dt><dd class="text-[14px] font-bold">${(o.done || x.reached >= 5) && guaranteeOK(x.guarantee) ? 'יש' : '-'}</dd></div>
+          </dl>
+          <div class="mt-3 flex flex-wrap items-center gap-1">
+            ${o.done
+              ? html`<${Button} variant="mini" onClick=${() => onOpen(o.id)}><${Icon} name="file-text" size=${15} />לפתוח<//>
+                <button type="button" onClick=${() => onEdit(o.id)} class=${act}><${Icon} name="pencil" size=${15} />לערוך</button>
+                <button type="button" onClick=${() => onCopy(o.id)} class=${act}><${Icon} name="message-circle" size=${15} />לוואטסאפ</button>
+                <button type="button" onClick=${() => onPdf(o.id)} class=${act}><${Icon} name="file-down" size=${15} />PDF</button>`
+              : html`<${Button} variant="mini" onClick=${() => onEdit(o.id)}><${Icon} name="arrow-left" size=${15} />להמשיך לבנות<//>`}
+          </div>
+        </article>`;
+      })}
+      ${!picker
+        ? html`<button type="button" onClick=${() => setPicker(true)} class="flex min-h-[180px] flex-col items-center justify-center gap-2 rounded-[18px] border-[1.5px] border-dashed border-brand-300 bg-white/60 p-5 text-center hover:border-brand-600 hover:bg-white cursor-pointer">
+            <span class="grid h-11 w-11 place-items-center rounded-2xl bg-brand-100 text-brand-600"><${Icon} name="plus" size=${22} /></span>
+            <b class="text-[16px]">הצעה חדשה</b>
+            <span class="text-[14px] text-muted">למוצר אחר מהסל, או גרסה נוספת לאותו מוצר</span>
+          </button>`
+        : html`<div class="rise rounded-[18px] bg-white p-4 ring-1 ring-brand-300 md:p-5">
+            <div class="mb-3 flex items-center justify-between gap-2"><b class="font-display text-[17px]">לאיזה מוצר מהסל?</b><button type="button" onClick=${() => setPicker(false)} class="text-[14px] font-bold text-muted hover:text-ink cursor-pointer">ביטול</button></div>
+            <div class="flex flex-col gap-1.5">
+              ${paid.map((p) => {
+                const has = list.some((o) => o.pid === p.id);
+                return html`<button key=${p.id} type="button" onClick=${() => onNew(p.id)} class="flex items-center gap-3 rounded-xl border-[1.5px] border-line p-3 text-start hover:border-brand-600 cursor-pointer">
+                  <span class="min-w-0 flex-1"><b class="block text-[15px] leading-snug">${p.name}</b><span class="text-[13px] text-muted">${ROLE[p.role]}${has ? ' · יש כבר הצעה' : ''}</span></span>
+                  <b class="shrink-0 font-display tabular-nums">${fmt(p.price)}${p.monthly ? html`<span class="text-[12px] font-normal text-muted"> לחודש</span>` : ''}</b>
+                </button>`;
+              })}
+            </div>
+          </div>`}
     </div>
   </div>`;
 }

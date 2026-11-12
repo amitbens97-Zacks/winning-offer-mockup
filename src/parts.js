@@ -3,7 +3,7 @@
 import { html, useState, Icon, cx } from './lib.js';
 import { InlineEdit, Button } from './components.js';
 import { inputCls } from './ui.js';
-import { Screen, MoneyEdit } from './kit.js';
+import { Screen, MoneyEdit, From } from './kit.js';
 import { OUTCOMES, TIMES, LENSES, BASIS, CLIENT_FILE, GENDER, g } from './data.js';
 import { activeComps, ideasOf, loose, compsTotal, covered, openObstacles, fmt, todayText } from './calc.js';
 
@@ -99,12 +99,23 @@ export function ProblemsScreen({ s, set, aside, onAdd, adding }) {
     setText('');
     setOpen(false);
   };
-  return html`<${Screen} title=${['מה ', 'יעצור אותו', ' בדרך?']} sub=${g('הכריש כתב את המשפטים האלה מתוך מה שסיפרת על הלקוח בצייד הלקוחות. הורד את מה שלא נכון אצלך.', 'הכריש כתב את המשפטים האלה מתוך מה שסיפרת על הלקוח בצייד הלקוחות. הורידי את מה שלא נכון אצלך.')} aside=${aside}>
-    <div class="grid gap-2 sm:grid-cols-2">
-      ${s.problems.map((p) => html`<button key=${p.id} type="button" role="checkbox" aria-checked=${p.on} onClick=${() => toggle(p.id)} class=${cx('group flex items-start gap-2.5 rounded-2xl border-[1.5px] p-3.5 text-start transition cursor-pointer', p.on ? 'border-line bg-white hover:border-brand-300' : 'border-dashed border-line bg-transparent')}>
-        <span class=${cx('mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md transition', p.on ? 'bg-brand-600 text-white' : 'bg-white text-faint ring-1 ring-line')}><${Icon} name=${p.on ? 'check' : 'plus'} size=${13} strokeWidth=${3} /></span>
-        <span class=${cx('text-[16px] font-semibold leading-snug', !p.on && 'text-faint line-through')}>"${p.text}"</span>
-      </button>`)}
+  // Two moments where a sentence like this stops him: before he buys (he says no) and on the way (he gives up).
+  const groups = [
+    { id: 'buy', icon: 'circle-x', title: 'לפני שהוא קונה', sub: 'מה יגרום לו להגיד "לא, תודה"', list: s.problems.filter((p) => p.at === 'before') },
+    { id: 'way', icon: 'log-out', title: 'באמצע הדרך', sub: 'מה יגרום לו להתייאש ולוותר', list: s.problems.filter((p) => p.at !== 'before') },
+  ];
+  return html`<${Screen} title=${['מה ', 'יעצור אותו', ' בדרך?']} sub=${g('אלה משפטים שהלקוח אומר לעצמו. כל אחד מהם יכול לגרום לו לא לקנות, או לוותר באמצע. ההצעה שנבנה תענה על כל משפט שתשאיר כאן.', 'אלה משפטים שהלקוח אומר לעצמו. כל אחד מהם יכול לגרום לו לא לקנות, או לוותר באמצע. ההצעה שנבנה תענה על כל משפט שתשאירי כאן.')} aside=${aside}>
+    <p class="-mt-3 mb-5 flex flex-wrap items-center gap-2 text-[14px] text-muted"><${From}>מתוך צייד הלקוחות<//>הכריש כתב אותם ממה שסיפרת על הלקוח. מה שלא נכון אצלך, מורידים בלחיצה.</p>
+    <div class="flex flex-col gap-5">
+      ${groups.map((gr) => html`<section key=${gr.id}>
+        <h2 class="mb-2 flex items-baseline gap-2"><span class="inline-flex items-center gap-1.5 font-display text-[18px] font-bold"><${Icon} name=${gr.icon} size=${18} class="self-center text-brand-600" />${gr.title}</span><span class="text-[14px] text-muted">${gr.sub}</span></h2>
+        <div class="grid gap-2 sm:grid-cols-2">
+          ${gr.list.map((p) => html`<button key=${p.id} type="button" role="checkbox" aria-checked=${p.on} onClick=${() => toggle(p.id)} class=${cx('group flex items-start gap-2.5 rounded-2xl rounded-ss-md border-[1.5px] p-3.5 text-start transition cursor-pointer', p.on ? 'border-line bg-white hover:border-brand-300' : 'border-dashed border-line bg-transparent')}>
+            <span class=${cx('mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md transition', p.on ? 'bg-brand-600 text-white' : 'bg-white text-faint ring-1 ring-line')}><${Icon} name=${p.on ? 'check' : 'plus'} size=${13} strokeWidth=${3} /></span>
+            <span class="min-w-0"><span class=${cx('block text-[12px] font-bold', p.on ? 'text-muted' : 'text-faint')}>${p.on ? 'הוא אומר לעצמו:' : 'ירד מהרשימה'}</span><span class=${cx('text-[16px] font-semibold leading-snug', !p.on && 'text-faint line-through')}>"${p.text}"</span></span>
+          </button>`)}
+        </div>
+      </section>`)}
     </div>
     ${!open
       ? html`<button type="button" onClick=${() => setOpen(true)} disabled=${adding} class="mt-3 inline-flex items-center gap-1.5 text-[15px] font-bold text-brand-600 hover:underline cursor-pointer"><${Icon} name="plus" size=${16} />${adding ? 'מוסיף...' : 'בעיה שחסרה'}</button>`

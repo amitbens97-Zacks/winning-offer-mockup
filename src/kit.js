@@ -114,23 +114,36 @@ export function StateIcon({ state }) {
   return html`<span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-canvas text-faint ring-1 ring-line"><${Icon} name="minus" size=${15} /></span>`;
 }
 
-// The big "what you get vs what you pay" card on the price screen: two numbers, the ratio
-// between them, and two bars that move as bonuses go on and off.
-export function ValueMeter({ value, price, priceSlot, foot }) {
+// The price screen's meter, as plain as an equation: what he gets (the components + the bonuses)
+// against what he pays, the ratio between them, and a mark where ×2 is (the target).
+export function ValueMeter({ value, price, priceSlot, foot, comps = value, bonus = 0 }) {
   const r = price > 0 ? value / price : 0;
-  const t = TONE[ratioTone(r)];
-  const max = Math.max(value, price, 1);
+  const tone = ratioTone(r);
+  const t = TONE[tone];
+  const target = price * 2;
+  const max = Math.max(value, target * 1.08, 1);
+  const pct = (v) => `${(v / max) * 100}%`;
+  const gap = Math.max(0, Math.ceil((target - value) / 10) * 10);
   return html`<div class="fb-panel !p-4 md:!p-5">
-    <div class="flex items-end justify-between gap-3">
-      <div><p class="text-[13px] font-bold text-muted">מה מקבלים</p><b class="whitespace-nowrap font-display text-[24px] font-black tabular-nums text-money md:text-[32px]">${fmt(value)}</b></div>
-      <span class=${cx('mb-1.5 whitespace-nowrap rounded-full px-2.5 py-1 font-display text-[15px] font-black md:px-3 md:text-[17px] tabular-nums transition-colors', r >= 2 ? 'bg-money-50' : r >= 1.5 ? 'bg-warn-50' : 'bg-error-50', t.text)}>${fmtRatio(r)}</span>
-      <div class="whitespace-nowrap text-end"><p class="text-[13px] font-bold text-muted">מה משלמים</p>${priceSlot}</div>
+    <div class="grid grid-cols-[1fr_auto_1fr] items-end gap-2 md:gap-3">
+      <div class="min-w-0">
+        <p class="text-[13px] font-bold text-muted">מה הוא מקבל</p>
+        <b class="whitespace-nowrap font-display text-[24px] font-black tabular-nums text-money md:text-[32px]">${fmt(value)}</b>
+        <p class="whitespace-nowrap text-[12px] tabular-nums text-muted md:text-[13px]">רכיבים ${fmt(comps)}${bonus > 0 ? html` <b class="text-money">+ בונוסים ${fmt(bonus)}</b>` : ''}</p>
+      </div>
+      <span class=${cx('mb-1.5 whitespace-nowrap rounded-full px-2.5 py-1 font-display text-[15px] font-black md:px-3 md:text-[17px] tabular-nums transition-colors', tone === 'good' ? 'bg-money-50' : tone === 'mid' ? 'bg-warn-50' : 'bg-error-50', t.text)}>${fmtRatio(r)}</span>
+      <div class="whitespace-nowrap text-end"><p class="text-[13px] font-bold text-muted">מה הוא משלם</p>${priceSlot}</div>
     </div>
-    <div class="mt-3 flex flex-col gap-1.5">
-      <span class="h-3 overflow-hidden rounded-full bg-canvas ring-1 ring-line"><span class=${cx('block h-full rounded-full transition-all duration-500', t.bar)} style=${{ width: `${(value / max) * 100}%` }}></span></span>
-      <span class="h-3 overflow-hidden rounded-full bg-canvas ring-1 ring-line"><span class="block h-full rounded-full bg-ink/70 transition-all duration-500" style=${{ width: `${(price / max) * 100}%` }}></span></span>
+    <div class="relative mt-7 flex flex-col gap-1.5">
+      <span class="absolute -top-6 whitespace-nowrap text-[12px] font-bold text-muted" style=${{ insetInlineStart: pct(target), transform: 'translateX(50%)' }}>היעד: פי 2</span>
+      <span class="flex h-3.5 overflow-hidden rounded-full bg-canvas ring-1 ring-line">
+        <span class=${cx('block h-full transition-all duration-500', t.bar)} style=${{ width: pct(comps) }}></span>
+        <span class=${cx('block h-full opacity-50 transition-all duration-500', t.bar)} style=${{ width: pct(bonus) }}></span>
+      </span>
+      <span class="h-3.5 overflow-hidden rounded-full bg-canvas ring-1 ring-line"><span class="block h-full rounded-full bg-ink/70 transition-all duration-500" style=${{ width: pct(price) }}></span></span>
+      <span class="pointer-events-none absolute -bottom-1 -top-1 w-0 border-s-2 border-dashed border-ink/50" style=${{ insetInlineStart: pct(target) }}></span>
     </div>
-    <p class=${cx('mt-2 text-[14px] font-bold', t.text)}>${t.label}</p>
+    <p class=${cx('mt-2.5 text-[15px] font-bold', t.text)}>הלקוח מקבל ${fmtRatio(r)} ממה שהוא משלם. ${tone === 'good' ? 'ההצעה מעל היעד.' : `עוד ${fmt(gap)} של ערך, ומגיעים ליעד.`}</p>
     ${foot}
   </div>`;
 }
