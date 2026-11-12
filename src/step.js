@@ -3,7 +3,7 @@
 import { html, useState, useEffect, Icon, cx, confetti, PencilLine, PencilCheck } from './lib.js';
 import { Button, Note } from './components.js';
 import { inputCls } from './ui.js';
-import { CORE, USER, REVIEW_DIMS, SAVED, PARTS, g } from './data.js';
+import { CORE, USER, REVIEW_DIMS, SAVED, PARTS, PART_WHY, g } from './data.js';
 import { activeComps, activeProblems, bonusList, total, fmt, fmtRatio, ratio, payLine, guaranteeLine, guaranteeOK, capacity, minimum, whatsappText, missing } from './calc.js';
 
 // ---------- opening ----------
@@ -12,8 +12,14 @@ export function Opening({ onReview }) {
     <div>
       <p class="fb-eyebrow mb-2">שלב 8 · בניית מותג אישי</p>
       <h1 class="fb-h1 mb-3 text-[34px] leading-[1.1] md:text-[46px]">הצעה <span class="fb-marker">שקשה לסרב לה</span></h1>
-      <p class="mb-6 max-w-[40ch] text-[18px] text-ink-2">בונים הצעה כל כך טובה, שהלקוח ירגיש טיפש אם הוא לא לוקח אותה.</p>
-      <button type="button" onClick=${onReview} class="inline-flex items-center gap-2 text-[15px] font-bold text-brand-600 hover:underline cursor-pointer"><${Icon} name="file-search" size=${17} />יש לי כבר הצעה. לבדוק אותה קודם</button>
+      <p class="mb-5 max-w-[40ch] text-[18px] text-ink-2">בונים הצעה כל כך טובה, שלהגיד כן יהיה ללקוח הדבר הכי קל.</p>
+      <ol class="mb-5 grid grid-cols-2 gap-x-4 gap-y-2 md:gap-x-5" aria-label="ששת החלקים">
+        ${PARTS.map((p, i) => html`<li key=${p} class="flex items-start gap-2.5">
+          <span class="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-100 text-[12px] font-black text-brand-600">${i + 1}</span>
+          <span class="leading-snug"><b class="block text-[15px]">${p}</b><span class="text-[13px] text-muted">${PART_WHY[i]}</span></span>
+        </li>`)}
+      </ol>
+      <button type="button" onClick=${onReview} class="inline-flex items-center gap-2 text-[15px] font-bold text-brand-600 hover:underline cursor-pointer"><${Icon} name="file-search" size=${17} />יש לי כבר הצעה</button>
     </div>
     <${Scale} />
   </div>`;
@@ -22,12 +28,13 @@ export function Opening({ onReview }) {
 // The idea of the step in one picture: what goes on the value side outweighs the price.
 // Blocks drop onto the value pan one by one, then the beam tips.
 function Scale() {
+  const [run, setRun] = useState(0); // a tap on the picture plays it again
   const blocks = [
     { y: 206, w: 92, label: 'התוצאה', d: 0.25 },
     { y: 178, w: 80, label: 'בונוסים', d: 0.6 },
     { y: 150, w: 68, label: 'הבטחה', d: 0.95 },
   ];
-  return html`<div class="relative mx-auto w-full max-w-[470px]" aria-hidden="true">
+  return html`<div key=${run} class="relative mx-auto w-full max-w-[470px] cursor-pointer" aria-hidden="true" onClick=${() => setRun((r) => r + 1)}>
     <svg viewBox="0 0 420 320" class="w-full" style="font-family: Rubik, Assistant, sans-serif">
       <g filter="url(#pencil-rough)" stroke="#2d3e66" stroke-width="3" stroke-linecap="round" fill="none">
         <path d="M210 70 L210 282" />
@@ -58,7 +65,10 @@ function Scale() {
         <text x="348" y="276" text-anchor="middle" font-size="14" font-weight="700" fill="#5f6775">מה מקבלים</text>
       </g>
     </svg>
-    <span class="hand sc-note absolute right-0 -top-3 rotate-[-5deg] text-[32px]">פי 2 מהמחיר!</span>
+    <span class="sc-note pointer-events-none absolute -top-5 right-0 flex flex-col items-start">
+      <span class="hand rotate-[-4deg] text-[30px] leading-none">שווה יותר ממה שעולה</span>
+      <svg viewBox="0 0 40 48" class="ms-[52px] h-11 w-9 text-[var(--sky-text)]" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4 C 6 18, 10 30, 22 42" /><path d="M12 38 L22 43 L25 32" /></svg>
+    </span>
   </div>`;
 }
 
@@ -149,6 +159,7 @@ export function JourneyCard({ s, part, onGo }) {
               ${now && html`<span class="rounded-full bg-brand-600 px-1.5 text-[11px] font-bold text-white">עכשיו</span>`}
               ${next && html`<span class="rounded-full bg-canvas px-1.5 text-[11px] font-bold text-muted ring-1 ring-line">הבא</span>`}
             </span>
+            ${now && html`<span class="block text-[13px] font-semibold leading-snug text-brand-600">${PART_WHY[i]}</span>`}
             ${value && html`<span class="line-clamp-2 text-[13px] leading-snug text-muted">${value}</span>`}
           </button>
         </li>`;

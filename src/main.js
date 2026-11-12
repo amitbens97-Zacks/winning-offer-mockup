@@ -160,6 +160,21 @@ function App({ view: shellView, onViewChange }) {
     }
     setBusy(null);
   };
+  // "הצעות חדשות מהכריש" once the shark's own pool is used: new ideas from the model.
+  const moreIdeas = async () => {
+    if (!hasAI()) return notify('אין כרגע עוד הצעות. עם המודל מחובר, הכריש כותב כאן רעיונות חדשים', 'sparkles');
+    if (busy) return;
+    setBusy('ideas');
+    let fresh = [];
+    try {
+      fresh = await ai.ideas(sRef.current);
+      setS((x) => ({ ...x, ideas: [...x.ideas, ...fresh] }));
+    } catch (e) {
+      aiError(e);
+    }
+    setBusy(null);
+    return fresh;
+  };
   const addProblem = async (text, lens) => {
     const id = `u${Date.now()}`;
     const base = { id, text, lens, at: AT_BY_LENS[lens], how: '', on: true, mine: true };
@@ -290,7 +305,7 @@ function App({ view: shellView, onViewChange }) {
     review: html`<${Review} result=${review.result} busy=${busy === 'review'} text=${review.text} setText=${(t) => setReview((v) => ({ ...v, text: t }))} />`,
     outcome: html`<${OutcomeScreen} ...${props} onMore=${moreOutcomes} busy=${busy === 'outcomes'} />`,
     problems: html`<${ProblemsScreen} ...${props} onAdd=${addProblem} adding=${busy === 'problem'} />`,
-    matrix: html`<${MatrixScreen} ...${props} />`,
+    matrix: html`<${MatrixScreen} ...${props} notify=${notify} onMoreIdeas=${moreIdeas} busy=${busy === 'ideas'} />`,
     components: html`<${ComponentsScreen} ...${props} />`,
     value: html`<${ValueScreen} ...${props} onPrice=${setPrice} onSuggest=${suggestBonus} busyId=${busy} />`,
     guarantee: html`<${GuaranteeScreen} ...${props} onType=${setGuaranteeType} />`,

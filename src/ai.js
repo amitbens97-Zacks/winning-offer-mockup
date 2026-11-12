@@ -5,7 +5,7 @@
 // user approves or edits. Counting (values, ratio, capacity) stays in calc.js.
 // The mockup is a static page, so the key is typed by whoever opens it (Shift+D) and kept
 // only in that browser. Without a key, the screens use the drafts in data.js.
-import { USER, CLIENT_FILE, CORE, CORE_INCLUDES, BASKET, LENSES, ROAD, REVIEW_DIMS, g } from './data.js';
+import { TIMES, USER, CLIENT_FILE, CORE, CORE_INCLUDES, BASKET, LENSES, ROAD, REVIEW_DIMS, g } from './data.js';
 import { fmt, capacity, payLine } from './calc.js';
 
 const KEY = 'flowbiz-wo-apikey';
@@ -60,7 +60,7 @@ export function contextBlock() {
     `ההצעה נבנית למוצר: ${CORE.name}, ${fmt(CORE.price)} כולל מע"מ, ${CORE.months} חודשים, ${CORE.hours} שעות עבודה ללקוח. תשלום: ${payLine({ price: CORE.price, pay: CORE.pay })}.`,
     `מה כלול היום (מהסל): ${CORE_INCLUDES.join(', ')}.`,
     `שאר הסל: ${BASKET.filter((p) => p.role !== 'core').map((p) => `${p.name} (${p.price ? fmt(p.price) : 'חינם'})`).join(', ')}.`,
-    `קיבולת אמיתית: עד ${cap.perMonth} לקוחות חדשים בחודש.`,
+    `קיבולת אמיתית: עד ${cap.perMonth} ${USER.newClients} בחודש.`,
     `הוכחות: ${USER.clientsSoFar ? `${USER.clientsSoFar} לקוחות` : 'עוד אין לקוחות. אסור להמציא עדויות או תוצאות.'}`,
     'כללים של המערכת: לא משתמשים במילה "הנחה" בטקסט למשתמש. לא מציעים הגרלות. מחסור ודחיפות רק אמיתיים.',
   ].join('\n');
@@ -93,10 +93,21 @@ const obj = (props) => ({ type: 'object', properties: props, required: Object.ke
 // Part 1: three ways to say the outcome (interview stage 2).
 export async function outcomes(current) {
   const out = await ask({
-    task: `שלב 2 בראיון: התוצאה. כתוב שלושה ניסוחים חדשים לתוצאה שהלקוח רוצה, במילים שלו, שונים מאלה: ${current.map((o) => `"${o}"`).join(', ')}. לכל ניסוח: text (בלי פרק הזמן), time (אחד מ: 30 יום, 60 יום, 90 יום, 6 חודשים), status (מה אחרים יראו, המעמד, משפט קצר), why (למה הניסוח הזה, עד 8 מילים), risky (true אם יש בו מספר מדויק שצריך לעמוד מאחוריו).`,
+    task: `שלב 2 בראיון: התוצאה. כתוב שלושה ניסוחים חדשים לתוצאה שהלקוח רוצה, במילים שלו, שונים מאלה: ${current.map((o) => `"${o}"`).join(', ')}. לכל ניסוח: text (בלי פרק הזמן), time (אחד מ: ${TIMES.join(', ')}), status (מה אחרים יראו, המעמד, משפט קצר), why (למה הניסוח הזה, עד 8 מילים), risky (true אם יש בו מספר מדויק שצריך לעמוד מאחוריו).`,
     schema: obj({ items: { type: 'array', items: obj({ text: str, time: str, status: str, why: str, risky: { type: 'boolean' } }) } }),
   });
   return out.items.slice(0, 3).map((o, i) => ({ id: `ai${Date.now()}${i}`, ...o }));
+}
+
+// Part 3a: new ways of delivery the offer does not have yet (interview stages 5-6).
+export async function ideas(s) {
+  const have = s.ideas.map((d) => `"${d.text}"`).join(', ');
+  const probs = s.problems.filter((p) => p.on).map((p) => `${p.id}: "${p.text}"`).join('; ');
+  const out = await ask({
+    task: `שלבים 5-6 בראיון: עוד דברים שאפשר לתת ללקוח. כתוב שלושה רעיונות חדשים, שווים ללקוח הרבה וקלים לבעל העסק לתת, שלא דומים לאלה: ${have}. הבעיות של הלקוח: ${probs}. לכל רעיון: text (קצר, מה מקבלים), solves (מזהי הבעיות שהוא פותר), win (true אם זה ניצחון ראשון בימים הראשונים).`,
+    schema: obj({ items: { type: 'array', items: obj({ text: str, solves: { type: 'array', items: str }, win: { type: 'boolean' } }) } }),
+  });
+  return out.items.slice(0, 3).map((d, i) => ({ id: `aid${Date.now()}${i}`, text: d.text, solves: d.solves, win: d.win, cost: 'low', value: 'high', pool: true, in: false }));
 }
 
 // Part 2: a problem the user added → its "איך ל..." and where it sits.

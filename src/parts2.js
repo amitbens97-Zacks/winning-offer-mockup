@@ -4,7 +4,7 @@ import { html, useState, Icon, cx } from './lib.js';
 import { InlineEdit, Button } from './components.js';
 import { inputCls } from './ui.js';
 import { Screen, MoneyEdit, ValueMeter, How, StateIcon } from './kit.js';
-import { CLIENT_FILE, G_TYPES, Z_CHIPS, URGENCY, NAMES, CORE, GENDER, g } from './data.js';
+import { USER, CLIENT_FILE, G_TYPES, Z_CHIPS, URGENCY, NAMES, CORE, GENDER, g } from './data.js';
 import { total, payLine, capacity, checks, fmt } from './calc.js';
 
 const pickF = (o, k) => (GENDER === 'f' && o[`${k}F`]) || o[k];
@@ -113,7 +113,7 @@ export function UrgencyScreen({ s, set, aside }) {
   const pick = (id) => set((x) => ({ ...x, urgency: { ...x.urgency, id, newPrice: x.urgency.newPrice || Math.round((x.price * 1.15) / 100) * 100 }, seats: { on: id === 'seats' } }));
   const setU = (p) => set((x) => ({ ...x, urgency: { ...x.urgency, ...p } }));
   const dateTxt = u.date ? new Date(u.date).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' }) : '...';
-  const sub = { seats: `${cap.perMonth} לקוחות חדשים בחודש, לפי השעות שלך` };
+  const sub = { seats: `${cap.perMonth} ${USER.newClients} בחודש, לפי השעות שלך` };
   return html`<${Screen} title=${['למה לקנות ', 'עכשיו', '?']} sub="רק אם זה אמיתי. הצעה בלי דחיפות עדיפה על דחיפות מזויפת." aside=${aside}>
     <div class="flex flex-col gap-2" role="radiogroup" aria-label="למה עכשיו">
       ${URGENCY.map((o) => {
@@ -125,7 +125,7 @@ export function UrgencyScreen({ s, set, aside }) {
           </button>
           ${on && o.id === 'seats' && html`<div class="rise px-4 pb-4 ps-[68px] text-[15px]">
             <p>"אנחנו מקבלים ${cap.perMonth} משפחות חדשות בחודש, כדי שכל תוכנית תיבנה אישית."</p>
-            <${How}><p>${Math.round(cap.forClients)} שעות בחודש ללקוחות ÷ ${cap.perClient.toFixed(1)} שעות ללקוח = ${cap.atOnce} במקביל. התוכנית ${CORE.months} חודשים, אז ${cap.perMonth} חדשים בחודש.</p><//>
+            <${How}><p>${Math.round(cap.forClients)} שעות בחודש ללקוחות ÷ ${cap.perClient.toFixed(1)} שעות ללקוח = ${cap.atOnce} במקביל. התוכנית ${CORE.months} חודשים, אז ${cap.perMonth} ${USER.newClients} בחודש.</p><//>
           </div>`}
           ${on && o.id === 'cohort' && html`<div class="rise flex flex-wrap items-center gap-3 px-4 pb-4 ps-[68px] text-[15px]">
             <input type="date" class=${cx(inputCls, 'max-w-[200px]')} value=${u.date} onInput=${(e) => setU({ date: e.target.value })} aria-label="תאריך ההתחלה" />

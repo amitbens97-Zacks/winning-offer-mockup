@@ -5,7 +5,7 @@ import { InlineEdit, Button } from './components.js';
 import { inputCls } from './ui.js';
 import { Screen, MoneyEdit } from './kit.js';
 import { OUTCOMES, TIMES, LENSES, BASIS, CLIENT_FILE, GENDER, g } from './data.js';
-import { activeComps, ideasOf, loose, compsTotal, covered, openObstacles, fmt } from './calc.js';
+import { activeComps, ideasOf, loose, compsTotal, covered, openObstacles, fmt, todayText } from './calc.js';
 
 const pickF = (o, k) => (GENDER === 'f' && o[`${k}F`]) || o[k];
 const Radio = ({ on }) => html`<span class=${cx('mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 transition', on ? 'border-brand-600' : 'border-line')}>${on && html`<span class="h-2.5 w-2.5 rounded-full bg-brand-600"></span>`}</span>`;
@@ -17,6 +17,9 @@ const MoreLink = ({ onClick, busy, children }) => html`<button type="button" onC
 export function OutcomeScreen({ s, set, aside, onMore, busy }) {
   const o = s.outcome;
   const [editing, setEditing] = useState(false);
+  const [editToday, setEditToday] = useState(false);
+  const today = todayText(s);
+  const todayEdited = today !== CLIENT_FILE.pain;
   const pick = (opt) => {
     setEditing(false);
     set((x) => ({ ...x, outcome: { id: opt.id, text: pickF(opt, 'text'), time: opt.time, status: pickF(opt, 'status'), byShark: true } }));
@@ -24,12 +27,22 @@ export function OutcomeScreen({ s, set, aside, onMore, busy }) {
   const edit = (p) => set((x) => ({ ...x, outcome: { ...x.outcome, ...p, byShark: false } }));
   const options = s.altOutcomes || OUTCOMES;
   const chosen = options.find((x) => x.id === o.id);
-  return html`<${Screen} title=${['מה הלקוח ', 'ישיג', ' בסוף?']} sub=${g('בחר את התוצאה שבשבילה הוא קונה: לא מה תעשה איתו, מה ישתנה אצלו.', 'בחרי את התוצאה שבשבילה הוא קונה: לא מה תעשי איתו, מה ישתנה אצלו.')} aside=${aside}>
+  return html`<${Screen} title=${['מה הלקוח ', 'מרוויח', ' בסוף?']} sub=${g('בחר את התוצאה שבשבילה הוא קונה, לא את הדרך: מה ישתנה אצלו.', 'בחרי את התוצאה שבשבילה הוא קונה, לא את הדרך: מה ישתנה אצלו.')} aside=${aside}>
     <!-- Before → after -->
     <section class="grid overflow-hidden rounded-3xl bg-white shadow-[0_12px_32px_-16px_rgba(0,56,184,.35)] ring-1 ring-line md:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)]">
       <div class="relative flex flex-col gap-2 bg-canvas p-5 md:p-6">
-        <p class="inline-flex items-center gap-1.5 text-[13px] font-bold text-muted"><${Icon} name="cloud-drizzle" size=${16} />היום</p>
-        <p class="text-[16px] font-semibold leading-snug text-ink-2">${CLIENT_FILE.pain}</p>
+        <p class="inline-flex items-center gap-1.5 text-[13px] font-bold text-muted"><${Icon} name="cloud-drizzle" size=${16} />היום אצל הלקוח</p>
+        ${editToday
+          ? html`<div class="rise">
+              <textarea rows="3" class=${cx(inputCls, '!h-auto bg-white py-2 text-[16px] font-semibold leading-snug')} value=${today} onInput=${(e) => set((x) => ({ ...x, today: e.target.value }))} aria-label="היום אצל הלקוח"></textarea>
+              <button type="button" onClick=${() => (!today.trim() && set((x) => ({ ...x, today: CLIENT_FILE.pain })), setEditToday(false))} class="mt-2 inline-flex h-9 items-center gap-1 rounded-xl bg-brand-600 px-3 text-[14px] font-bold text-white cursor-pointer"><${Icon} name="check" size=${15} />סיום</button>
+            </div>`
+          : html`<p class="text-[16px] font-semibold leading-snug text-ink-2">${today}</p>
+            <p class="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-[13px] text-muted">
+              <span class="inline-flex items-center gap-1"><${Icon} name="file-user" size=${14} />${todayEdited ? 'ערכת להצעה הזאת' : 'ממה שכתבת בצייד הלקוחות'}</span>
+              <button type="button" onClick=${() => setEditToday(true)} class="inline-flex items-center gap-1 font-bold text-brand-600 hover:underline cursor-pointer"><${Icon} name="pencil" size=${13} />לערוך</button>
+              ${todayEdited && html`<button type="button" onClick=${() => set((x) => ({ ...x, today: CLIENT_FILE.pain }))} class="font-bold text-muted hover:text-ink hover:underline cursor-pointer">להחזיר את המקור</button>`}
+            </p>`}
         <span aria-hidden="true" class="absolute z-10 grid h-9 w-9 place-items-center rounded-full bg-white text-brand-600 shadow ring-1 ring-line max-md:-bottom-[18px] max-md:left-1/2 max-md:-translate-x-1/2 md:-end-[18px] md:top-1/2 md:-translate-y-1/2"><${Icon} name="arrow-left" size=${18} class="max-md:-rotate-90" /></span>
       </div>
       <div class="relative bg-brand-600 p-5 pt-7 text-white md:p-6 md:ps-9">
@@ -86,7 +99,7 @@ export function ProblemsScreen({ s, set, aside, onAdd, adding }) {
     setText('');
     setOpen(false);
   };
-  return html`<${Screen} title=${['מה ', 'יעצור אותו', ' בדרך?']} sub=${g('אלה הדברים שהלקוח שלך אומר לעצמו. הורד את מה שלא נכון אצלך.', 'אלה הדברים שהלקוח שלך אומר לעצמו. הורידי את מה שלא נכון אצלך.')} aside=${aside}>
+  return html`<${Screen} title=${['מה ', 'יעצור אותו', ' בדרך?']} sub=${g('הכריש כתב את המשפטים האלה מתוך מה שסיפרת על הלקוח בצייד הלקוחות. הורד את מה שלא נכון אצלך.', 'הכריש כתב את המשפטים האלה מתוך מה שסיפרת על הלקוח בצייד הלקוחות. הורידי את מה שלא נכון אצלך.')} aside=${aside}>
     <div class="grid gap-2 sm:grid-cols-2">
       ${s.problems.map((p) => html`<button key=${p.id} type="button" role="checkbox" aria-checked=${p.on} onClick=${() => toggle(p.id)} class=${cx('group flex items-start gap-2.5 rounded-2xl border-[1.5px] p-3.5 text-start transition cursor-pointer', p.on ? 'border-line bg-white hover:border-brand-300' : 'border-dashed border-line bg-transparent')}>
         <span class=${cx('mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md transition', p.on ? 'bg-brand-600 text-white' : 'bg-white text-faint ring-1 ring-line')}><${Icon} name=${p.on ? 'check' : 'plus'} size=${13} strokeWidth=${3} /></span>
@@ -108,29 +121,49 @@ export function ProblemsScreen({ s, set, aside, onAdd, adding }) {
 }
 
 // ---------- part 3a: what goes into the offer ----------
-// Everything the user could give, in two lists: in the offer / left out. The shark's first cut
-// keeps what is worth a lot to the client (the 2×2 of the method: worth to him × cost to you).
-// Each list is sorted by importance: worth a lot first, then easy to give, then first win.
-// The text and both tags can be edited, the user can add items, and a tap on the circle moves one across.
+// One list: what the offer includes, sorted by importance (worth a lot to him, then easy to give,
+// then first win: the 2×2 of the method). The circle takes an item out. "לערוך" opens the text and
+// the three tags. Under the list: the user's own item, and "הצעות חדשות מהכריש", three at a time
+// (the shark's further ideas, items taken out that are worth a lot, and with the model, new ones).
 const weight = (d) => (d.value === 'high' ? 4 : 0) + (d.cost === 'low' ? 2 : 0) + (d.win ? 1 : 0);
 const byWeight = (a, b) => weight(b) - weight(a);
-function IdeaCard({ d, s, onFlip, onEdit, onRemove }) {
+const TAGS = [
+  ['שווה לו הרבה', 'bg-money-50 text-money ring-1 ring-money/20', 'הלקוח מרגיש את זה'],
+  ['קל לך לתת', 'bg-brand-50 text-brand-600 ring-1 ring-brand-200', 'לא דורש ממך הרבה'],
+  ['ניצחון ראשון', 'bg-gold/25 text-ink ring-1 ring-gold/40', 'שינוי כבר בימים הראשונים'],
+];
+const tagCls = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-bold';
+function Tags({ d, edit, onEdit }) {
+  const list = [
+    { on: d.value === 'high', text: d.value === 'high' ? 'שווה לו הרבה' : 'שווה לו מעט', cls: d.value === 'high' ? TAGS[0][1] : 'bg-canvas text-muted ring-1 ring-line', flip: { value: d.value === 'high' ? 'low' : 'high' } },
+    { on: d.cost === 'low', text: d.cost === 'low' ? 'קל לך לתת' : 'דורש ממך הרבה', cls: d.cost === 'low' ? TAGS[1][1] : 'bg-canvas text-muted ring-1 ring-line', flip: { cost: d.cost === 'low' ? 'high' : 'low' } },
+    { on: !!d.win, text: 'ניצחון ראשון', icon: 'zap', cls: d.win ? TAGS[2][1] : 'border border-dashed border-line text-faint', flip: { win: !d.win }, hideOff: true },
+  ];
+  return html`<span class="mt-2 flex flex-wrap gap-1.5">${list.map((x) =>
+    edit
+      ? html`<button key=${x.text} type="button" title="לשנות" onClick=${() => onEdit(x.flip)} class=${cx(tagCls, x.cls, 'cursor-pointer hover:ring-brand-300')}>${x.icon && html`<${Icon} name=${x.icon} size=${12} />`}${x.text}</button>`
+      : (x.on || !x.hideOff) && html`<span key=${x.text} class=${cx(tagCls, x.cls)}>${x.icon && html`<${Icon} name=${x.icon} size=${12} />`}${x.text}</span>`,
+  )}</span>`;
+}
+function IdeaCard({ d, s, editing, onEditing, onOut, onEdit, onRemove }) {
   const solves = (d.solves || []).map((id) => s.problems.find((p) => p.id === id && p.on)).filter(Boolean)[0];
-  const tag = 'rounded-full px-2 py-0.5 text-[12px] font-bold transition cursor-pointer hover:ring-brand-300';
-  return html`<div class=${cx('rise group flex items-start gap-3 rounded-2xl p-3.5 transition', d.in ? 'bg-white shadow-sm ring-1 ring-line' : 'border-[1.5px] border-dashed border-line bg-white/60')}>
-    <button type="button" role="switch" aria-checked=${d.in} onClick=${onFlip} title=${d.in ? 'להוציא מההצעה' : 'להכניס להצעה'} aria-label=${d.in ? 'להוציא מההצעה' : 'להכניס להצעה'} class=${cx('mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full transition cursor-pointer', d.in ? 'bg-brand-600 text-white hover:bg-error' : 'bg-canvas text-muted ring-1 ring-line hover:bg-brand-600 hover:text-white')}>
-      <${Icon} name=${d.in ? 'check' : 'plus'} size=${15} class=${d.in ? 'group-hover:hidden' : ''} />${d.in && html`<${Icon} name="minus" size=${15} class="hidden group-hover:block" />`}
+  return html`<div class=${cx('rise group flex items-start gap-3 rounded-2xl bg-white p-3.5 shadow-sm ring-1 transition', editing ? 'ring-brand-300' : 'ring-line')}>
+    <button type="button" onClick=${onOut} title="להוציא מההצעה" aria-label="להוציא מההצעה" class="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand-600 text-white transition hover:bg-error cursor-pointer">
+      <${Icon} name="check" size=${15} class="group-hover:hidden" /><${Icon} name="minus" size=${15} class="hidden group-hover:block" />
     </button>
     <div class="min-w-0 flex-1">
-      <b class=${cx('block text-[15px] leading-snug', d.in ? 'text-ink' : 'text-muted')}><${InlineEdit} value=${d.text} placeholder="מה נותנים" onSave=${(v) => (v.trim() ? onEdit({ text: v.trim() }) : onRemove?.())} class="!whitespace-normal" /></b>
-      ${d.in && solves ? html`<span class="mt-1 block truncate text-[13px] text-muted">עונה על: “${solves.text}”</span>` : !d.in && d.why ? html`<span class="mt-1 block text-[13px] text-muted">${d.why}</span>` : null}
-      <span class="mt-2 flex flex-wrap gap-1.5">
-        <button type="button" title="לשנות" onClick=${() => onEdit({ value: d.value === 'high' ? 'low' : 'high' })} class=${cx(tag, d.value === 'high' ? 'bg-money-50 text-money ring-1 ring-money/20' : 'bg-canvas text-muted ring-1 ring-line')}>${d.value === 'high' ? 'שווה לו הרבה' : 'שווה לו מעט'}</button>
-        <button type="button" title="לשנות" onClick=${() => onEdit({ cost: d.cost === 'low' ? 'high' : 'low' })} class=${cx(tag, d.cost === 'low' ? 'bg-brand-50 text-brand-600 ring-1 ring-brand-200' : 'bg-canvas text-muted ring-1 ring-line')}>${d.cost === 'low' ? 'קל לך לתת' : 'דורש ממך הרבה'}</button>
-        <button type="button" title=${d.win ? 'להוריד' : 'לסמן כניצחון ראשון'} onClick=${() => onEdit({ win: !d.win })} class=${cx(tag, 'items-center gap-1', d.win ? 'inline-flex bg-gold/25 text-ink ring-1 ring-gold/40' : 'hidden border border-dashed border-line text-faint md:group-hover:inline-flex')}><${Icon} name="zap" size=${12} />ניצחון ראשון</button>
-      </span>
+      ${editing
+        ? html`<b class="block text-[15px] leading-snug text-ink"><${InlineEdit} value=${d.text} placeholder="מה נותנים" onSave=${(v) => v.trim() && onEdit({ text: v.trim() })} class="!whitespace-normal" /></b>`
+        : html`<b class="block text-[15px] leading-snug text-ink">${d.text}</b>`}
+      ${solves && html`<span class="mt-1 block truncate text-[13px] text-muted">עונה על: “${solves.text}”</span>`}
+      <${Tags} d=${d} edit=${editing} onEdit=${onEdit} />
     </div>
-    ${onRemove && html`<button type="button" onClick=${onRemove} title="למחוק" aria-label="למחוק" class="mt-0.5 shrink-0 rounded-md p-1 text-muted hover:bg-canvas hover:text-error md:hidden md:group-hover:block cursor-pointer"><${Icon} name="trash-2" size=${15} /></button>`}
+    <span class="flex shrink-0 items-center gap-0.5">
+      ${editing
+        ? html`<button type="button" onClick=${() => onEditing(false)} class="inline-flex h-8 items-center gap-1 rounded-lg bg-brand-100 px-2.5 text-[13px] font-bold text-brand-600 cursor-pointer"><${Icon} name="check" size=${14} />סיום</button>`
+        : html`<button type="button" onClick=${() => onEditing(true)} class="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-[13px] font-bold text-brand-600 hover:bg-brand-50 md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100 cursor-pointer"><${Icon} name="pencil" size=${14} />לערוך</button>`}
+      ${onRemove && editing && html`<button type="button" onClick=${onRemove} title="למחוק" aria-label="למחוק" class="rounded-md p-1.5 text-muted hover:bg-canvas hover:text-error cursor-pointer"><${Icon} name="trash-2" size=${15} /></button>`}
+    </span>
   </div>`;
 }
 function AddIdea({ onAdd }) {
@@ -141,22 +174,51 @@ function AddIdea({ onAdd }) {
     <${Button} variant="secondary" type="submit" disabled=${!v.trim()}><${Icon} name="plus" size=${16} />להוסיף<//>
   </form>`;
 }
-export function MatrixScreen({ s, set, aside }) {
+export function MatrixScreen({ s, set, aside, notify, onMoreIdeas, busy }) {
+  const [editing, setEditing] = useState(null);
+  const [shown, setShown] = useState([]); // ids of the shark's suggestions on screen
   const edit = (id, p) => set((x) => ({ ...x, ideas: x.ideas.map((d) => (d.id === id ? { ...d, ...p } : d)) }));
   const remove = (id) => set((x) => ({ ...x, ideas: x.ideas.filter((d) => d.id !== id) }));
   const add = (text) => set((x) => ({ ...x, ideas: [...x.ideas, { id: `u${Date.now()}`, text, solves: [], cost: 'low', value: 'high', in: true, own: true }] }));
+  const out = (d) => {
+    edit(d.id, { in: false });
+    setEditing(null);
+    notify('הוצא מההצעה', 'circle-minus', () => edit(d.id, { in: true }));
+  };
   const inn = s.ideas.filter((d) => d.in).sort(byWeight);
-  const out = s.ideas.filter((d) => !d.in).sort(byWeight);
-  const card = (d) => html`<${IdeaCard} key=${d.id} d=${d} s=${s} onFlip=${() => edit(d.id, { in: !d.in })} onEdit=${(p) => edit(d.id, p)} onRemove=${d.own ? () => remove(d.id) : null} />`;
-  const col = (list, head, icon, tone, empty, foot) => html`<section class=${cx('rounded-3xl p-3 md:p-4', tone)}>
-    <p class="mb-3 flex items-center gap-2 px-1 font-display text-[16px] font-black"><${Icon} name=${icon} size=${18} />${head}<span class="rounded-full bg-white px-2 py-0.5 text-[13px] tabular-nums ring-1 ring-line">${list.length}</span></p>
-    <div class="flex flex-col gap-2">${list.length ? list.map(card) : html`<p class="px-1 py-4 text-center text-[14px] text-muted">${empty}</p>`}${foot}</div>
-  </section>`;
-  return html`<${Screen} title=${['מה ', 'נכנס', ' להצעה?']} sub="אלה כל הדברים שאפשר לתת ללקוח, מהחשוב ביותר ומטה. העיגול מעביר לצד השני, ואפשר לערוך כל טקסט ותגית או להוסיף משלך." aside=${aside}>
-    <div class="grid items-start gap-3 md:grid-cols-[3fr_2fr]">
-      ${col(inn, 'בפנים ההצעה', 'circle-check', 'bg-brand-50 text-brand-600 ring-1 ring-brand-200', 'עוד לא נכנס כלום', html`<${AddIdea} onAdd=${add} />`)}
-      ${col(out, 'נשאר בחוץ', 'circle-minus', 'bg-canvas text-muted ring-1 ring-line', 'הכול בפנים')}
-    </div>
+  // The pool: worth a lot to him and not in the offer. What is worth little stays out (the method's cut).
+  const pool = s.ideas.filter((d) => !d.in && d.value === 'high' && !shown.includes(d.id)).sort(byWeight);
+  const visible = shown.map((id) => s.ideas.find((d) => d.id === id)).filter((d) => d && !d.in);
+  const more = async () => {
+    if (pool.length) return setShown((v) => [...v.filter((id) => s.ideas.find((d) => d.id === id && !d.in)), ...pool.slice(0, 3).map((d) => d.id)]);
+    const fresh = await onMoreIdeas();
+    if (fresh?.length) setShown((v) => [...v, ...fresh.map((d) => d.id)]);
+  };
+  const empty = !pool.length && !visible.length;
+  return html`<${Screen} title=${['מה ', 'נכנס', ' להצעה?']} sub=${g('עבור על הרשימה. מה שלא מתאים, מורידים בלחיצה על העיגול.', 'עברי על הרשימה. מה שלא מתאים, מורידים בלחיצה על העיגול.')} aside=${aside}>
+    <p class="-mt-3 mb-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-muted">${TAGS.map(([t, cls, means], i) => html`<span key=${t} class="inline-flex items-center gap-1.5"><span class=${cx(tagCls, cls)}>${i === 2 && html`<${Icon} name="zap" size=${12} />`}${t}</span>${means}</span>`)}</p>
+    <section class="rounded-3xl bg-brand-50 p-3 ring-1 ring-brand-200 md:p-4">
+      <p class="mb-3 flex items-center gap-2 px-1 font-display text-[16px] font-black text-brand-600"><${Icon} name="circle-check" size=${18} />מה ההצעה כוללת<span class="rounded-full bg-white px-2 py-0.5 text-[13px] tabular-nums ring-1 ring-line">${inn.length}</span></p>
+      <div class="flex flex-col gap-2">
+        ${inn.length ? inn.map((d) => html`<${IdeaCard} key=${d.id} d=${d} s=${s} editing=${editing === d.id} onEditing=${(on) => setEditing(on ? d.id : null)} onOut=${() => out(d)} onEdit=${(p) => edit(d.id, p)} onRemove=${d.own ? () => remove(d.id) : null} />`) : html`<p class="px-1 py-4 text-center text-[14px] text-muted">עוד לא נכנס כלום</p>`}
+        <${AddIdea} onAdd=${add} />
+      </div>
+    </section>
+    ${visible.length > 0 && html`<section class="rise mt-4 rounded-3xl border-[1.5px] border-dashed border-brand-300 bg-white/70 p-3 md:p-4">
+      <p class="mb-3 flex items-center gap-2 px-1 font-display text-[16px] font-black"><${Icon} name="sparkles" size=${17} class="text-brand-600" />הכריש מציע</p>
+      <div class="flex flex-col gap-2">${visible.map((d) => {
+        const solves = (d.solves || []).map((id) => s.problems.find((p) => p.id === id && p.on)).filter(Boolean)[0];
+        return html`<div key=${d.id} class="rise flex items-start gap-3 rounded-2xl bg-white p-3.5 ring-1 ring-line">
+          <div class="min-w-0 flex-1">
+            <b class="block text-[15px] leading-snug">${d.text}</b>
+            ${solves && html`<span class="mt-1 block truncate text-[13px] text-muted">עונה על: “${solves.text}”</span>`}
+            <${Tags} d=${d} />
+          </div>
+          <${Button} variant="mini" class="shrink-0" onClick=${() => edit(d.id, { in: true })}><${Icon} name="plus" size=${15} />להוסיף<//>
+        </div>`;
+      })}</div>
+    </section>`}
+    <div class="mt-4"><${Button} variant="secondary" onClick=${more} disabled=${busy}><${Icon} name="sparkles" size=${16} />${busy ? 'הכריש חושב...' : visible.length && !empty ? 'עוד הצעות מהכריש' : 'הצעות חדשות מהכריש'}<//></div>
   <//>`;
 }
 

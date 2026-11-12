@@ -115,13 +115,14 @@
       /* The opening scale: blocks drop onto the value pan, then the beam tips toward value. */
       .sc-drop { animation: scDrop 0.5s cubic-bezier(0.3, 1.4, 0.5, 1) backwards; }
       @keyframes scDrop { from { transform: translateY(-70px); opacity: 0; } }
-      .sc-beam { transform-box: view-box; transform-origin: 210px 70px; animation: scTilt 0.9s 1.45s ease-in-out both; }
-      @keyframes scTilt { from { transform: rotate(0deg); } to { transform: rotate(7deg); } }
-      .sc-right { animation: scDown 0.9s 1.45s ease-in-out both; }
-      @keyframes scDown { to { transform: translateY(17px); } }
-      .sc-left { animation: scUp 0.9s 1.45s ease-in-out both; }
-      @keyframes scUp { to { transform: translateY(-17px); } }
-      .sc-note { animation: rise 0.4s 2.3s ease-out backwards; }
+      /* Each block that lands tips the beam a little further (blocks land at about 0.6s, 0.95s and 1.3s). */
+      .sc-beam { transform-box: view-box; transform-origin: 210px 70px; animation: scTilt 1.2s 0.5s ease-in-out both; }
+      @keyframes scTilt { 0%, 8% { transform: rotate(0deg); } 18%, 37% { transform: rotate(2.4deg); } 47%, 66% { transform: rotate(4.8deg); } 80%, 100% { transform: rotate(7deg); } }
+      .sc-right { animation: scDown 1.2s 0.5s ease-in-out both; }
+      @keyframes scDown { 0%, 8% { transform: none; } 18%, 37% { transform: translateY(6px); } 47%, 66% { transform: translateY(12px); } 80%, 100% { transform: translateY(17px); } }
+      .sc-left { animation: scUp 1.2s 0.5s ease-in-out both; }
+      @keyframes scUp { 0%, 8% { transform: none; } 18%, 37% { transform: translateY(-6px); } 47%, 66% { transform: translateY(-12px); } 80%, 100% { transform: translateY(-17px); } }
+      .sc-note { animation: rise 0.4s 1.9s ease-out backwards; }
       .rise { animation: rise 0.35s ease-out backwards; }
       .slide-in { animation: slideIn 0.3s ease-out backwards; }
       .grow { animation: grow 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards; transform-origin: top; }

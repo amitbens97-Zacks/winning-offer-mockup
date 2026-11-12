@@ -15,6 +15,15 @@ export const PARTNER = { name: 'הכריש', role: 'השותף העסקי' };
 
 export const STEP = { n: 8, name: 'בניית הצעה מנצחת', chapterNo: 3, chapter: 'בניית מותג אישי', icon: 'gift' };
 export const PARTS = ['התוצאה', 'מה עוצר', 'מה כלול', 'המחיר', 'הבטחה', 'שם'];
+// Why each part is there, in one line: on the opening and under the part the user is in now.
+export const PART_WHY = [
+  'מה הלקוח קונה באמת',
+  'מה יגרום לו להגיד לא',
+  'מה הוא מקבל, כדי להוריד כל מכשול',
+  'שהערך יהיה גדול בהרבה מהמחיר',
+  'לקחת ממנו את הסיכון, וסיבה אמיתית לקנות עכשיו',
+  'שם שאומר לו "זה בשבילך", ובדיקה אחרונה',
+];
 
 // ---------- who the user is (?user=f or ?user=m, or the developer panel) ----------
 const PROFILES = {
@@ -53,6 +62,8 @@ export const USER = {
   b2b: false,
   experience: g('10 שנים אח בטיפת חלב, ויועץ שינה מוסמך', '10 שנים אחות בטיפת חלב, ויועצת שינה מוסמכת'),
   clientsSoFar: 0,
+  // How this business counts new clients (written by the shark from the audience): "5 משפחות חדשות בחודש".
+  newClients: 'משפחות חדשות',
 };
 
 // "צייד הלקוחות" (4): the golden sentence and the client file.
@@ -153,6 +164,11 @@ export const IDEAS = [
   { id: 'd9', text: 'מענה בוואטסאפ כל ערב, עד 22:00', solves: ['p4', 'p1'], cost: 'high', value: 'high', mode: 'איתך' },
   { id: 'd4', text: 'דף אחד: מה עושים בכל התעוררות', solves: ['p9'], cost: 'low', value: 'high', mode: 'לבד' },
   { id: 'd5', text: 'יומן שינה של שורה אחת בכל בוקר, וסיכום בסוף השבוע', solves: ['p6'], cost: 'low', value: 'high', mode: 'בשבילך' },
+  // The shark's further ideas: worth a lot, but not in the first cut. "הצעות חדשות מהכריש" offers them three at a time.
+  { id: 'd15', text: 'תוכנית מוכנה לנסיעות, לחגים ולמעבר שעון', solves: ['p7'], cost: 'low', value: 'high', mode: 'בשבילך', pool: true },
+  { id: 'd16', text: 'שיחה אחת עם שני ההורים יחד, כדי ששניהם יעבדו באותה דרך', solves: ['p5', 'p8'], cost: 'low', value: 'high', mode: 'איתך', pool: true },
+  { id: 'd17', text: 'כרטיס למקרר עם שגרת הערב, צעד אחר צעד', solves: ['p4', 'p10'], cost: 'low', value: 'high', mode: 'לבד', pool: true },
+  { id: 'd18', text: 'שבועיים של וואטסאפ אחרי סוף התוכנית', solves: ['p12'], cost: 'low', value: 'high', mode: 'איתך', pool: true },
   { id: 'd3', text: 'קורס וידאו על שלבי השינה של תינוקות', solves: ['p5'], cost: 'high', value: 'low', mode: 'לבד', why: 'מוסיף להורים עבודה במקום להוריד' },
   { id: 'd6', text: 'מסמך מחקרי מלא על שינת תינוקות, 30 עמודים', solves: ['p6'], cost: 'low', value: 'low', mode: 'לבד', why: 'מבלבל יותר ממה שעוזר' },
   { id: 'd11', text: 'ביקור בית לסידור חדר השינה', solves: ['p4'], cost: 'high', value: 'low', mode: 'בשבילך', why: 'הרבה זמן ונסיעות, ומשנה מעט' },

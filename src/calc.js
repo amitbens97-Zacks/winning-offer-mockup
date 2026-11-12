@@ -12,7 +12,8 @@ export function freshState() {
   return {
     outcome: { id: o.id, text: pickF(o, 'text'), time: o.time, status: pickF(o, 'status'), byShark: true },
     problems: PROBLEMS.map((p) => ({ ...p, text: pickF(p, 'text'), on: true })),
-    ideas: IDEAS.map((d) => ({ ...d, in: d.value === 'high' })),
+    ideas: IDEAS.map((d) => ({ ...d, in: d.value === 'high' && !d.pool })),
+    today: CLIENT_FILE.pain, // "היום אצל הלקוח": from the client file, editable for this offer
     comps: COMPONENTS.map((c) => ({ ...c, ideas: [...c.ideas] })),
     price: CORE.price,
     pay: CORE.pay === 'monthly' ? 'monthly' : 'start',
@@ -25,6 +26,9 @@ export function freshState() {
     reached: 0,
   };
 }
+
+// The client's today line: the pain from the client file, or this offer's edited version.
+export const todayText = (s) => s.today ?? CLIENT_FILE.pain;
 
 // ---------- what is in the offer ----------
 export const activeProblems = (s) => s.problems.filter((p) => p.on);
@@ -150,7 +154,7 @@ export function whatsappText(s) {
   const lines = [
     `*${name}*`,
     '',
-    `${CLIENT_FILE.pain}? ${s.outcome.text}, תוך ${s.outcome.time}.`,
+    `${todayText(s)}? ${s.outcome.text}, תוך ${s.outcome.time}.`,
     '',
     'מה מקבלים:',
     ...comps.map((c) => `• ${c.name}: ${c.promise}`),
