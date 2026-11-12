@@ -1,7 +1,8 @@
 // Step 8 "בניית הצעה מנצחת", built on the offer-builder system prompt
 // (doc/offer-builder-prompt.md) and the method "איך בונים הצעה שקשה לסרב לה" (doc/offer-method.pdf).
 // Screens: opening → (review: an offer the user already has) → outcome → problems → matrix →
-// components → value (price + bonuses) → guarantee → urgency → name → check → done → offers ("ההצעות שלי").
+// components → value (price + bonuses) → guarantee → urgency → name → done → offers ("ההצעות שלי").
+// "הסבר מהכריש" on every screen opens the shark's note: a short explanation and a chat (src/explain.js).
 // One question per screen, one short instruction. The primary button names the next screen,
 // and on wide screens "ההצעה שלך" beside it shows what is done, what is now and what is next.
 // Link params: ?screen=<id>, ?user=f, ?embed = phone layout. Shift+D opens the developer notes.
@@ -12,34 +13,20 @@ import { freshState, draftBonuses, openObstacles, guaranteeOK, whatsappText } fr
 import * as ai from './ai.js';
 import { hasAI } from './ai.js';
 import { OutcomeScreen, ProblemsScreen, MatrixScreen, ComponentsScreen } from './parts.js';
-import { ValueScreen, GuaranteeScreen, UrgencyScreen, NameScreen, CheckScreen } from './parts2.js';
+import { ValueScreen, GuaranteeScreen, UrgencyScreen, NameScreen } from './parts2.js';
+import { EXPLAIN, SharkTalk } from './explain.js';
 import { Opening, Review, reviewByRules, JourneyCard, Done, Offers, productOf } from './step.js';
 import { DevPanel } from './devnotes.js';
 import { EMBED, IS_PHONE, readView, saveView, writeHandoff, takeHandoff, applyPhoneViewport, ViewToggle, PhonePreview } from './viewswitch.js';
 
 const params = new URLSearchParams(location.search);
-const FLOW = ['outcome', 'problems', 'matrix', 'components', 'value', 'guarantee', 'urgency', 'name', 'check'];
+const FLOW = ['outcome', 'problems', 'matrix', 'components', 'value', 'guarantee', 'urgency', 'name'];
 const SCREENS = ['opening', 'review', ...FLOW, 'done', 'offers'];
-const PART_OF = { outcome: 0, problems: 1, matrix: 2, components: 2, value: 3, guarantee: 4, urgency: 4, name: 5, check: 5 };
+const PART_OF = { outcome: 0, problems: 1, matrix: 2, components: 2, value: 3, guarantee: 4, urgency: 4, name: 5 };
 const FIRST_OF_PART = ['outcome', 'problems', 'matrix', 'value', 'guarantee', 'name'];
 // What the primary button says: where it goes next.
-const LABEL = { problems: 'מה עוצר', matrix: 'מה נכנס', components: 'הרכיבים', value: 'המחיר', guarantee: 'ההבטחה', urgency: 'למה עכשיו', name: 'השם', check: 'בדיקה אחרונה' };
+const LABEL = { problems: 'מה עוצר', matrix: 'מה נכנס', components: 'הרכיבים', value: 'המחיר', guarantee: 'ההבטחה', urgency: 'למה עכשיו', name: 'השם' };
 
-// The shark in the corner: one line per screen, never more.
-const SHARK_LINE = {
-  opening: 'אנשים לא קונים שירות. הם קונים את המקום שהם רוצים להגיע אליו.',
-  review: 'לא מתקנים הכול. מוצאים את הדבר האחד שהכי מזיז, ומתחילים ממנו.',
-  outcome: 'ההורים לא רוצים 8 שיחות זום. הם רוצים לישון לילה שלם.',
-  problems: g('כל בעיה שאתה פותר עבורו היא סיבה פחות להגיד לא.', 'כל בעיה שאת פותרת עבורו היא סיבה פחות להגיד לא.'),
-  matrix: 'יותר זה לא תמיד טוב יותר. מה ששווה לו מעט רק מעמיס עליו, ועליך.',
-  components: 'שם שמבטיח תוצאה שווה יותר מעוד שורה ברשימה.',
-  value: 'בונוס טוב פותר בעיה אחת שעוד עוצרת אותו. לא סתם מתנה.',
-  guarantee: g('כשאתה לוקח את הסיכון, לו נשאר רק להגיד כן.', 'כשאת לוקחת את הסיכון, לו נשאר רק להגיד כן.'),
-  urgency: 'דחיפות מזויפת נשרפת פעם אחת. אמיתית עובדת כל חודש.',
-  name: 'השם הוא הדבר הראשון שהלקוח שומע. שיגיד לו "זה בשבילך".',
-  check: 'לא צריך עשר מתוך עשר כדי לצאת לדרך. צריך לדעת מה חסר.',
-  offers: 'הצעה לכל מוצר בסל. כל אחת נבנית סביב התוצאה שהמוצר הזה נותן.',
-};
 
 // A problem the user added, without a model: a simple "איך ל..." and a place on the road by its lens.
 const AT_BY_LENS = { worth: 'before', work: 'run', hard: 'setup', time: 'leads' };
@@ -72,6 +59,7 @@ function App({ view: shellView, onViewChange }) {
   const [dev, setDev] = useState(false);
   const [unread, setUnread] = useState(true);
   const [minAdded, setMinAdded] = useState(false);
+  const [explainKey, setExplainKey] = useState(0); // "הסבר מהכריש" opens the shark's note
   // "ההצעות שלי": every offer of this step. The one being built lives in s; the others keep a copy.
   const [offers, setOffers] = useState([{ id: 'o1', pid: CORE.id, done: false, at: Date.now() }]);
   const [cur, setCur] = useState('o1');
@@ -91,7 +79,7 @@ function App({ view: shellView, onViewChange }) {
     if (PART_OF[screen] != null || end) {
       const reach = end ? PARTS.length - 1 : PART_OF[screen];
       // Past the name screen, a link shows the offer with the shark's first name picked.
-      const named = (x) => (['check', 'done', 'offers'].includes(screen) && !x.name.text ? { ...x, name: { id: NAMES[0].id, text: NAMES[0].text } } : x);
+      const named = (x) => (['done', 'offers'].includes(screen) && !x.name.text ? { ...x, name: { id: NAMES[0].id, text: NAMES[0].text } } : x);
       // A link past the price screen shows the bonuses already switched on.
       setS((x) => prep(named({ ...x, reached: Math.max(x.reached, reach) }), end ? 'done' : screen, screen !== 'value'));
     }
@@ -122,6 +110,11 @@ function App({ view: shellView, onViewChange }) {
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
   }, [dev]);
+  useEffect(() => {
+    const open = () => setExplainKey((n) => n + 1);
+    window.addEventListener('fb:explain', open);
+    return () => window.removeEventListener('fb:explain', open);
+  }, []);
 
   const notify = (text, icon = 'info', undo) => {
     setToast({ id: Date.now(), text, icon, undo });
@@ -202,7 +195,7 @@ function App({ view: shellView, onViewChange }) {
     if (i > 0) go(FLOW[i - 1]);
     else if (screen === 'outcome') go(review.result ? 'review' : 'opening');
     else if (screen === 'review') go('opening');
-    else if (screen === 'done') go('check');
+    else if (screen === 'done') go('name');
     else if (screen === 'offers') go('done');
   };
 
@@ -376,7 +369,7 @@ function App({ view: shellView, onViewChange }) {
           : html`<${BottomBar}
               back=${backBtn}
               status=${html`<${Status} reason=${reason} hint=${hint} />`}
-              primary=${screen === 'check' ? primary('סיום השלב', () => go('done'), { check: true }) : primary(`הבא: ${LABEL[FLOW[FLOW.indexOf(screen) + 1]]}`, next)}
+              primary=${screen === 'name' ? primary('סיום השלב', () => go('done'), { check: true }) : primary(`הבא: ${LABEL[FLOW[FLOW.indexOf(screen) + 1]]}`, next)}
             />`;
 
   const aside = html`<${JourneyCard} s=${s} part=${part} onGo=${(i) => go(FIRST_OF_PART[i])} product=${offers.length > 1 ? productOf(offers.find((o) => o.id === cur).pid).name : null} />`;
@@ -392,7 +385,6 @@ function App({ view: shellView, onViewChange }) {
     guarantee: html`<${GuaranteeScreen} ...${props} onType=${setGuaranteeType} />`,
     urgency: html`<${UrgencyScreen} ...${props} />`,
     name: html`<${NameScreen} ...${props} names=${names} onMore=${moreNames} busy=${busy === 'names'} />`,
-    check: html`<${CheckScreen} s=${s} aside=${aside} onFix=${(to) => go(to)} />`,
     done: html`<${Done} s=${s} notify=${notify} minAdded=${minAdded} onAddMin=${() => (setMinAdded(true), notify('"המינימום" נוסף לסל המוצרים', 'package'))} count=${offers.length} onOffers=${() => go('offers')} onAnother=${() => (go('offers'), setPicker(true))} />`,
     offers: html`<${Offers} list=${offerList} cur=${cur} picker=${picker} setPicker=${setPicker} onOpen=${openOffer} onEdit=${editOffer} onCopy=${copyOffer} onPdf=${pdfOffer} onNew=${newOffer} />`,
   }[screen];
@@ -401,7 +393,7 @@ function App({ view: shellView, onViewChange }) {
     ${top}
     <main class="thin-scroll relative min-h-0 flex-1 overflow-y-auto">
       ${body}
-      ${SHARK_LINE[screen] && html`<${PartnerBubble} key=${screen} message=${SHARK_LINE[screen]} unread=${unread} onRead=${() => setUnread(false)} />`}
+      ${EXPLAIN[screen] && html`<${PartnerBubble} key=${screen} message=${screen} unread=${unread} onRead=${() => setUnread(false)} openKey=${explainKey} body=${html`<${SharkTalk} screen=${screen} />`} />`}
     </main>
     ${bottom}
     <${Toast} toast=${toast} onUndo=${undoToast} />

@@ -2,6 +2,7 @@
 // the value meter, the shark's inline tip, tags and a few inputs.
 import { html, useState, useEffect, useRef, Icon, cx, PencilCheck } from './lib.js';
 import { SharkAvatar } from './components.js';
+import { ExplainButton } from './explain.js';
 import { LENSES, PARTNER } from './data.js';
 import { fmt, fmtRatio, ratioTone } from './calc.js';
 
@@ -10,7 +11,10 @@ import { fmt, fmtRatio, ratioTone } from './calc.js';
 export function Screen({ title, sub, children, wide, aside }) {
   return html`<div class=${cx('mx-auto px-4 py-6 md:px-8 md:py-8', aside ? 'max-w-[1180px] xl:grid xl:grid-cols-[minmax(0,1fr)_300px] xl:gap-10' : wide ? 'max-w-[1020px]' : 'max-w-[780px]')}>
     <div class="min-w-0">
-      <h1 class="fb-h1 mb-1.5 text-[26px] md:text-[32px]">${title[0]}<span class="fb-marker">${title[1]}</span>${title[2] || ''}</h1>
+      <div class="mb-1.5 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <h1 class="fb-h1 text-[26px] md:text-[32px]">${title[0]}<span class="fb-marker">${title[1]}</span>${title[2] || ''}</h1>
+        <${ExplainButton} class="md:mt-1" />
+      </div>
       ${sub && html`<p class="mb-6 max-w-[62ch] text-[17px] text-muted">${sub}</p>`}
       ${children}
     </div>

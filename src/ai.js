@@ -137,6 +137,16 @@ export async function moreBonuses(s, taken) {
   return out.items.slice(0, 3).map((b, i) => ({ ...b, id: `ai${Date.now()}${i}`, basis: 'separate' }));
 }
 
+// "לשאול את הכריש": a short answer about the screen the user is on, with the chat so far.
+export async function chat(screenTitle, history) {
+  const talk = history.map((m) => `${m.me ? 'בעל העסק' : 'הכריש'}: ${m.text}`).join('\n');
+  const out = await ask({
+    task: `בעל העסק נמצא במסך "${screenTitle}" בשלב "בניית הצעה מנצחת" ושואל עליו. ענה כמו שותף עסקי: קצר (2-4 משפטים), בעברית פשוטה, על המסך והשלב ועל ההצעה שלו. השיחה עד עכשיו:\n${talk}`,
+    schema: obj({ reply: str }),
+  });
+  return out.reply;
+}
+
 // Part 6: names (interview stage 11).
 export async function names(s) {
   const out = await ask({

@@ -2,6 +2,7 @@
 // the "ההצעה שלך" card beside each screen (done / now / next), and the finish.
 import { html, useState, useEffect, Icon, cx, confetti, PencilLine, PencilCheck } from './lib.js';
 import { Button, Note } from './components.js';
+import { ExplainButton } from './explain.js';
 import { inputCls } from './ui.js';
 import { CORE, USER, REVIEW_DIMS, SAVED, PARTS, PART_WHY, BASKET, g } from './data.js';
 import { activeComps, activeProblems, bonusList, total, fmt, fmtRatio, ratio, payLine, guaranteeLine, guaranteeOK, capacity, minimum, whatsappText, missing } from './calc.js';
@@ -19,7 +20,10 @@ export function Opening({ onReview }) {
           <span class="leading-snug"><b class="block text-[15px]">${p}</b><span class="text-[13px] text-muted">${PART_WHY[i]}</span></span>
         </li>`)}
       </ol>
-      <button type="button" onClick=${onReview} class="inline-flex items-center gap-2 text-[15px] font-bold text-brand-600 hover:underline cursor-pointer"><${Icon} name="file-search" size=${17} />יש לי כבר הצעה</button>
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-3">
+        <${ExplainButton} />
+        <button type="button" onClick=${onReview} class="inline-flex items-center gap-2 text-[15px] font-bold text-brand-600 hover:underline cursor-pointer"><${Icon} name="file-search" size=${17} />יש לי כבר הצעה</button>
+      </div>
     </div>
     <${Equation} />
   </div>`;
@@ -27,8 +31,8 @@ export function Opening({ onReview }) {
 
 // The idea of the step in one picture, as an equation read left to right like any math:
 // what he gets (the result, the bonuses, the guarantee, stacked up, on the left) > what he pays
-// (one small price tag, on the right). The sign sits in a circle so it reads as "greater than",
-// not as an arrow. The blocks land one by one, the tag swings in, then the sign, the sparkles and
+// (one small price tag, on the right). The ">" is as tall as the stack, so its open side plainly
+// holds everything he gets and it does not read as an arrow. The blocks land one by one, the tag swings in, then the sign, the sparkles and
 // the labels. A tap plays it again.
 function Equation() {
   const [run, setRun] = useState(0);
@@ -50,9 +54,7 @@ function Equation() {
           </svg>
         </span>
       </div>
-      <span class="eq-sign mb-[52px] grid h-12 w-12 place-items-center rounded-full bg-white shadow-[0_8px_18px_-10px_rgba(0,40,120,0.5)] ring-2 ring-brand-200 md:mb-[60px] md:h-14 md:w-14">
-        <svg viewBox="0 0 40 40" class="h-6 w-6 text-brand-900 md:h-7 md:w-7" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 8 L30 20 L11 32" /></svg>
-      </span>
+      <svg viewBox="0 0 56 150" preserveAspectRatio="none" class="eq-sign h-[144px] w-11 self-end text-brand-900 md:h-[156px] md:w-14" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"><path d="M8 6 L48 75 L8 144" vector-effect="non-scaling-stroke" /></svg>
       <div class="relative flex flex-col-reverse items-center gap-1.5">
         <span class="absolute inset-x-0 bottom-0 top-6 rounded-full bg-brand-100 blur-2xl"></span>
         ${blocks.map(([label, icon, w, d]) => html`<span key=${label} class=${cx('eq-drop relative flex h-11 items-center justify-center gap-1.5 rounded-xl border-b-4 border-brand-900 bg-brand-600 font-display text-[15px] font-bold text-white shadow-md md:h-12 md:gap-2 md:text-[17px]', w)} style=${{ animationDelay: `${d}s` }}><${Icon} name=${icon} size=${17} />${label}</span>`)}
@@ -63,7 +65,7 @@ function Equation() {
     <svg viewBox="0 0 400 8" preserveAspectRatio="none" class="h-2 w-full overflow-visible text-ink/50" style="filter: url(#pencil-rough)"><path d="M6 4 Q 100 2 200 4 T 394 4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /></svg>
     <div class=${cx(cols, 'eq-line mt-3')}>
       <p class="text-center leading-tight"><b class="block font-display text-[17px] md:text-[19px]">מה משלמים</b><span class="text-[13px] text-muted md:text-[14px]">מה שהוא משלם</span></p>
-      <span class="w-12 md:w-14"></span>
+      <span class="w-11 md:w-14"></span>
       <p class="text-center leading-tight"><b class="block font-display text-[17px] md:text-[19px]">מה מקבלים</b><span class="mt-1 inline-block rounded-full bg-money-50 px-2.5 py-0.5 text-[13px] font-bold text-money md:text-[14px]">שווה הרבה יותר</span></p>
     </div>
   </div>`;
@@ -139,6 +141,7 @@ const ROWS = [
   (s) => s.name.text,
 ];
 export function JourneyCard({ s, part, onGo, product }) {
+  const [peek, setPeek] = useState(null); // a done part whose answer is open
   return html`<div class="paper rounded-[18px] p-4">
     <p class=${cx('fb-eyebrow !text-[12px]', !product && 'mb-3')}>ההצעה שלך</p>
     ${product && html`<p class="mb-3 truncate text-[13px] font-semibold text-muted">${product}</p>`}
@@ -147,19 +150,22 @@ export function JourneyCard({ s, part, onGo, product }) {
         const now = i === part;
         const done = !now && i <= s.reached;
         const next = !now && !done && i === part + 1;
-        const value = (done || now) && ROWS[i](s);
+        const open = done && peek === i;
+        const value = (now || open) && ROWS[i](s);
         return html`<li key=${label} class="relative flex gap-3 pb-3 last:pb-0">
           ${i < PARTS.length - 1 && html`<span class=${cx('absolute start-[11px] top-7 bottom-0 w-0.5', done ? 'bg-brand-300' : 'bg-line')}></span>`}
           <span class=${cx('relative z-[1] grid h-6 w-6 shrink-0 place-items-center rounded-full text-[12px] font-black', now ? 'bg-brand-600 text-white ring-4 ring-brand-100' : done ? 'bg-brand-100' : 'bg-canvas text-faint ring-1 ring-line')}>${done ? html`<${PencilCheck} size=${14} color="#0038b8" weight=${3} />` : i + 1}</span>
-          <button type="button" disabled=${!done} onClick=${() => onGo(i)} class=${cx('min-w-0 flex-1 text-start', done && 'cursor-pointer hover:opacity-80')}>
-            <span class="flex items-center gap-2">
+          <div class="min-w-0 flex-1">
+            <button type="button" disabled=${!done} onClick=${() => setPeek(open ? null : i)} aria-expanded=${done ? open : undefined} class=${cx('flex w-full items-center gap-2 text-start', done && 'cursor-pointer hover:opacity-80')}>
               <b class=${cx('text-[14px]', now ? 'text-brand-600' : done ? 'text-ink' : 'text-faint')}>${label}</b>
               ${now && html`<span class="rounded-full bg-brand-600 px-1.5 text-[11px] font-bold text-white">עכשיו</span>`}
               ${next && html`<span class="rounded-full bg-canvas px-1.5 text-[11px] font-bold text-muted ring-1 ring-line">הבא</span>`}
-            </span>
+              ${done && html`<${Icon} name="chevron-down" size=${14} class=${cx('ms-auto text-muted transition', open && 'rotate-180')} />`}
+            </button>
             ${now && html`<span class="block text-[13px] font-semibold leading-snug text-brand-600">${PART_WHY[i]}</span>`}
-            ${value && html`<span class="line-clamp-2 text-[13px] leading-snug text-muted">${value}</span>`}
-          </button>
+            ${value && html`<span class="line-clamp-3 block text-[13px] leading-snug text-muted">${value}</span>`}
+            ${open && html`<button type="button" onClick=${() => onGo(i)} class="mt-0.5 inline-flex items-center gap-1 text-[13px] font-bold text-brand-600 hover:underline cursor-pointer"><${Icon} name="pencil" size=${12} />לחזור לכאן</button>`}
+          </div>
         </li>`;
       })}
     </ol>
@@ -217,7 +223,7 @@ export function Done({ s, notify, onAnother, onOffers, count, onAddMin, minAdded
   return html`<div class="mx-auto max-w-[1080px] px-4 py-6 md:px-8 md:py-8">
     <div class="no-print mb-5 flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 class="fb-h1 text-[30px] md:text-[38px]">ההצעה <span class="fb-marker">מוכנה</span></h1>
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2"><h1 class="fb-h1 text-[30px] md:text-[38px]">ההצעה <span class="fb-marker">מוכנה</span></h1><${ExplainButton} /></div>
         <p class="mt-1 text-[16px] text-muted">ערך ${fmtRatio(ratio(s))} מהמחיר, עם הבטחה. נשמרה בקבצים וב"ההצעות שלי".</p>
       </div>
       <${Note} tone="white" tilt=${-2} class="fb-badge-note !w-[200px] !pt-7 max-md:hidden">
@@ -273,7 +279,7 @@ export function Offers({ list, cur, picker, setPicker, onOpen, onEdit, onCopy, o
   const paid = BASKET.filter((p) => p.price > 0);
   const date = (at) => new Date(at).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' });
   return html`<div class="mx-auto max-w-[1020px] px-4 py-6 max-md:pb-24 md:px-8 md:py-8">
-    <h1 class="fb-h1 mb-1.5 text-[28px] md:text-[34px]">ההצעות <span class="fb-marker">שלי</span></h1>
+    <div class="mb-1.5 flex flex-wrap items-start justify-between gap-x-4 gap-y-2"><h1 class="fb-h1 text-[28px] md:text-[34px]">ההצעות <span class="fb-marker">שלי</span></h1><${ExplainButton} class="md:mt-1" /></div>
     <p class="mb-6 max-w-[60ch] text-[17px] text-muted">כל הצעה שבונים נשמרת כאן, וכל אחת גם כ-PDF בקבצים. אפשר לפתוח, לערוך, או לבנות הצעה חדשה.</p>
     <div class="grid gap-3 md:grid-cols-2">
       ${list.map((o) => {
