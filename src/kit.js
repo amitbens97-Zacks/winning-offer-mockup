@@ -119,22 +119,39 @@ export function StateIcon({ state }) {
 // One marker shows where the offer is now, and one sentence says what is left.
 const AIM = 3;
 const SCALE_MAX = 4;
-export function ValueMeter({ value, price, priceSlot, foot, comps = value, bonus = 0 }) {
+function scaleOf(value, price) {
   const r = price > 0 ? value / price : 0;
   const pos = (x) => `${((Math.min(Math.max(x, 1), SCALE_MAX) - 1) / (SCALE_MAX - 1)) * 100}%`;
-  const need = (x) => fmt(Math.max(0, Math.ceil((price * x - value) / 10) * 10));
   const zone = r >= AIM ? 'aim' : r >= 2 ? 'min' : 'under';
-  const tone = { under: { text: 'text-warn', dot: 'bg-warn' }, min: { text: 'text-money', dot: 'bg-money' }, aim: { text: 'text-money', dot: 'bg-money' } }[zone];
+  const tone = zone === 'under' ? { text: 'text-warn', dot: 'bg-warn' } : { text: 'text-money', dot: 'bg-money' };
+  return { r, pos, zone, tone };
+}
+const ZONES = [
+  ['under', 'bg-warn-50 ring-1 ring-warn/20'],
+  ['min', 'bg-money-50 ring-1 ring-money/20'],
+  ['aim', 'bg-money/25 ring-1 ring-money/30'],
+];
+// The slim version that stays on top while scrolling down to the bonuses (only once the big meter is out of view).
+export function ValueStrip({ value, price }) {
+  const { r, pos, tone } = scaleOf(value, price);
+  return html`<div class="flex items-center gap-3 rounded-2xl bg-white/95 px-3 py-2 shadow-[0_8px_20px_-12px_rgba(0,30,90,0.45)] ring-1 ring-line backdrop-blur md:px-4">
+    <span class="whitespace-nowrap text-[13px]"><span class="text-muted">מקבל </span><b class="font-display text-[15px] tabular-nums text-money">${fmt(value)}</b></span>
+    <span class="relative flex h-2 min-w-[60px] flex-1 gap-0.5">
+      ${ZONES.map(([id, cls]) => html`<span key=${id} class=${cx('h-full flex-1 rounded-full', cls)}></span>`)}
+      <span class=${cx('absolute top-1/2 h-3.5 w-3.5 rounded-full ring-2 ring-white transition-all duration-500', tone.dot)} style=${{ insetInlineStart: pos(r), transform: 'translate(50%, -50%)' }}></span>
+    </span>
+    <span class=${cx('whitespace-nowrap rounded-full px-2 py-0.5 font-display text-[13px] font-black tabular-nums text-white', tone.dot)}>${fmtRatio(r)}</span>
+    <span class="whitespace-nowrap text-[13px]"><span class="text-muted">משלם </span><b class="font-display text-[15px] tabular-nums">${fmt(price)}</b></span>
+  </div>`;
+}
+export function ValueMeter({ value, price, priceSlot, foot, comps = value, bonus = 0 }) {
+  const { r, pos, zone, tone } = scaleOf(value, price);
+  const need = (x) => fmt(Math.max(0, Math.ceil((price * x - value) / 10) * 10));
   const line = {
     under: `עוד ${need(2)} של ערך, ומגיעים למינימום (פי 2).`,
     min: `ההצעה מעל המינימום. שואפים ליותר: עוד ${need(AIM)} של ערך, ומגיעים לפי ${AIM}.`,
     aim: 'מצוין. לזה שואפים.',
   }[zone];
-  const zones = [
-    ['under', 'bg-warn-50 ring-1 ring-warn/20'],
-    ['min', 'bg-money-50 ring-1 ring-money/20'],
-    ['aim', 'bg-money/25 ring-1 ring-money/30'],
-  ];
   return html`<div class="fb-panel !p-4 md:!p-5">
     <div class="flex items-end justify-between gap-3">
       <div class="min-w-0">
@@ -148,7 +165,7 @@ export function ValueMeter({ value, price, priceSlot, foot, comps = value, bonus
       <span class="absolute leading-none transition-all duration-500" style=${{ insetInlineStart: pos(r), bottom: 'calc(100% + 10px)', transform: 'translateX(50%)' }}>
         <span class=${cx('block whitespace-nowrap rounded-full px-2.5 py-0.5 font-display text-[14px] font-black tabular-nums text-white', tone.dot)}>${fmtRatio(r)}</span>
       </span>
-      <div class="flex h-3 gap-1">${zones.map(([id, cls]) => html`<span key=${id} class=${cx('h-full flex-1 rounded-full', cls)}></span>`)}</div>
+      <div class="flex h-3 gap-1">${ZONES.map(([id, cls]) => html`<span key=${id} class=${cx('h-full flex-1 rounded-full', cls)}></span>`)}</div>
       <span class=${cx('absolute top-1/2 h-5 w-5 rounded-full ring-[3px] ring-white shadow transition-all duration-500', tone.dot)} style=${{ insetInlineStart: pos(r), transform: 'translate(50%, -50%)' }}></span>
     </div>
     <div class="mt-1.5 flex text-center text-[12px] leading-tight text-muted">

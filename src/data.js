@@ -230,6 +230,16 @@ export const COMPONENTS = [
 ];
 
 // ---------- part 4: bonuses, one for each obstacle that is still open ----------
+// More bonuses the shark can suggest on top of the ones for open obstacles ("הכריש יציע עוד בונוסים").
+// Each answers one of the client's sentences, and each value says where it comes from.
+export const BONUS_EXTRAS = [
+  { id: 'x1', for: 'p6', name: 'יומן השינה למקרר', what: 'דף לכל שבוע: מתי נרדם, כמה התעורר. רואים בעיניים שהלילות משתפרים', kind: 'תבנית', value: 60, basis: 'time', note: 'חוסך כשעה של מעקב בחודש, × 60 ₪' },
+  { id: 'x2', for: 'p7', name: 'הדף לבייביסיטר ולסבתא', what: 'עמוד אחד לכל מי שמשכיב את התינוק: מה עושים, ומה לא, כדי שהשגרה לא תישבר', kind: 'תבנית', value: 80, basis: 'separate', note: 'כמו שיחת הדרכה קצרה למטפלת: 80 ₪' },
+  { id: 'x3', for: 'p4', name: 'הקלטה של שגרת הערב', what: '5 דקות שמע להשמיע כל ערב, כדי שהשגרה תהיה זהה בלי לחשוב', kind: 'כלי', value: 90, basis: 'time', note: 'חוסך כ-10 דקות בערב במשך חודש, בערך 90 ₪' },
+  { id: 'x4', for: 'p3', name: 'רשימת הקניות לחדר השינה', what: 'מה צריך בחדר (וילון, רעש לבן, תאורה) ומה מיותר, עם קישורים', kind: 'תבנית', value: 70, basis: 'money', note: 'חוסך קנייה אחת מיותרת, בערך 70 ₪' },
+  { id: 'x5', for: 'p12', name: 'שיחת בדיקה חודש אחרי הסוף', what: '20 דקות בזום: בודקים שהשינה נשמרת, ומתקנים אם משהו זז', kind: 'שיחה', value: 200, basis: 'separate', note: 'שיחת ייעוץ קצרה: 200 ₪' },
+  { id: 'x6', for: 'p5', name: 'שיחה לשני ההורים יחד', what: 'חצי שעה ששני ההורים שומעים את אותה תוכנית, כדי שלא יתווכחו באמצע הלילה', kind: 'שיחה', value: 150, basis: 'separate', note: 'כמו שיחת ייעוץ קצרה: 150 ₪' },
+];
 export const BONUS_DRAFTS = {
   p2: { name: 'המחשבון "כמה עולים לנו הלילות האלה"', what: 'מכניסים ימי מחלה, איחורים ועוד קפה, ורואים כמה הלילות בלי שינה כבר עולים בחודש', kind: 'כלי', value: 90, basis: 'time', note: 'חוסך כשעתיים של חישובים, × 45 ₪' },
   p10: { name: 'שבע הודעות ערב', what: 'הודעה קצרה בכל ערב בשבוע הראשון: מה עושים הלילה, בשלוש שורות', kind: 'תבנית', value: 120, basis: 'separate', note: 'כמו שיחת חיזוק קצרה בכל ערב, 7 × 17 ₪' },

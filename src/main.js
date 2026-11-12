@@ -144,10 +144,12 @@ function App({ view: shellView, onViewChange }) {
     if (to !== 'done' && FLOW.indexOf(to) < FLOW.indexOf('value')) return x;
     const open = openObstacles(x).map((p) => p.id);
     if (!x.bonuses) return { ...x, bonuses: draftBonuses(x, on) };
-    const kept = x.bonuses.filter((b) => open.includes(b.for));
+    // The drafts follow the open obstacles; the bonuses the user added on top (extra) always stay, after them.
+    const extra = x.bonuses.filter((b) => b.extra);
+    const kept = x.bonuses.filter((b) => !b.extra && open.includes(b.for));
     const fresh = draftBonuses(x, on).filter((d) => !kept.some((b) => b.for === d.for));
     const order = (b) => open.indexOf(b.for);
-    return { ...x, bonuses: [...kept, ...fresh].sort((a, b) => order(a) - order(b)) };
+    return { ...x, bonuses: [...[...kept, ...fresh].sort((a, b) => order(a) - order(b)), ...extra] };
   }
   const go = (to) => {
     if (PART_OF[to] != null) setS((x) => prep({ ...x, reached: Math.max(x.reached, PART_OF[to]) }, to));
@@ -262,6 +264,20 @@ function App({ view: shellView, onViewChange }) {
     }
     setBusy(null);
   };
+  // "הכריש יציע עוד בונוסים" once the written suggestions are used: three new ones from the model.
+  const moreBonuses = async (taken) => {
+    if (!hasAI()) return notify('אין כרגע עוד הצעות. עם המודל מחובר, הכריש כותב כאן בונוסים חדשים', 'sparkles');
+    if (busy) return;
+    setBusy('bonuses');
+    let fresh = [];
+    try {
+      fresh = await ai.moreBonuses(sRef.current, taken);
+    } catch (e) {
+      aiError(e);
+    }
+    setBusy(null);
+    return fresh;
+  };
   const moreNames = async () => {
     if (!hasAI()) return notify('עם המודל מחובר, הכריש כותב כאן שישה שמות חדשים', 'sparkles');
     if (busy) return;
@@ -372,7 +388,7 @@ function App({ view: shellView, onViewChange }) {
     problems: html`<${ProblemsScreen} ...${props} onAdd=${addProblem} adding=${busy === 'problem'} />`,
     matrix: html`<${MatrixScreen} ...${props} notify=${notify} onMoreIdeas=${moreIdeas} busy=${busy === 'ideas'} />`,
     components: html`<${ComponentsScreen} ...${props} />`,
-    value: html`<${ValueScreen} ...${props} onPrice=${setPrice} onSuggest=${suggestBonus} busyId=${busy} />`,
+    value: html`<${ValueScreen} ...${props} onPrice=${setPrice} onSuggest=${suggestBonus} busyId=${busy} onMoreBonuses=${moreBonuses} busyMore=${busy === 'bonuses'} />`,
     guarantee: html`<${GuaranteeScreen} ...${props} onType=${setGuaranteeType} />`,
     urgency: html`<${UrgencyScreen} ...${props} />`,
     name: html`<${NameScreen} ...${props} names=${names} onMore=${moreNames} busy=${busy === 'names'} />`,

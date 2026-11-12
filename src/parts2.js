@@ -1,18 +1,51 @@
 // Parts 4-6 of step 8: price and bonuses (one screen), the guarantee and "why now",
 // the name and the check before publishing.
-import { html, useState, Icon, cx } from './lib.js';
+import { html, useState, useEffect, useRef, Icon, cx } from './lib.js';
 import { InlineEdit, Button } from './components.js';
 import { inputCls } from './ui.js';
-import { Screen, MoneyEdit, ValueMeter, How, StateIcon } from './kit.js';
-import { USER, CLIENT_FILE, G_TYPES, Z_CHIPS, URGENCY, NAMES, CORE, GENDER, g } from './data.js';
+import { Screen, MoneyEdit, ValueMeter, ValueStrip, How, StateIcon } from './kit.js';
+import { USER, CLIENT_FILE, G_TYPES, Z_CHIPS, URGENCY, NAMES, CORE, GENDER, BONUS_EXTRAS, g } from './data.js';
 import { total, compsTotal, bonusTotal, payLine, capacity, checks, fmt } from './calc.js';
 
 const pickF = (o, k) => (GENDER === 'f' && o[`${k}F`]) || o[k];
+const list0 = (s) => s.bonuses || [];
 const chip = (on) => cx('h-9 rounded-full border-[1.5px] px-3.5 text-[14px] font-bold transition cursor-pointer', on ? 'border-brand-600 bg-brand-100 text-brand-600' : 'border-line bg-white hover:border-brand-300');
 
 // ---------- part 4: the price next to the value, and the bonuses that close the gap ----------
-export function ValueScreen({ s, set, aside, onPrice, onSuggest, busyId }) {
+export function ValueScreen({ s, set, aside, onPrice, onSuggest, busyId, onMoreBonuses, busyMore }) {
   const [payOpen, setPayOpen] = useState(false);
+  // The big meter stays in place; once it scrolls out of view, a slim strip with the same numbers sits on top.
+  const meterRef = useRef(null);
+  const [stuck, setStuck] = useState(false);
+  useEffect(() => {
+    const el = meterRef.current;
+    if (!el) return;
+    const main = el.closest('main');
+    const check = () => setStuck(el.getBoundingClientRect().bottom < main.getBoundingClientRect().top + 60);
+    main.addEventListener('scroll', check, { passive: true });
+    check();
+    return () => main.removeEventListener('scroll', check);
+  }, []);
+  // More bonuses: the shark's further suggestions, three at a time, and the user's own.
+  const [sugg, setSugg] = useState([]);
+  const [own, setOwn] = useState(null); // the "בונוס משלך" form: { name, value, note, for }
+  const taken = new Set(list0(s).map((b) => b.id));
+  const pool = BONUS_EXTRAS.filter((d) => !taken.has(`x-${d.id}`) && !sugg.some((x) => x.id === d.id) && s.problems.some((p) => p.id === d.for && p.on));
+  const more = async () => {
+    if (pool.length) return setSugg((v) => [...v, ...pool.slice(0, 3)]);
+    const fresh = await onMoreBonuses(list0(s).map((b) => b.name).filter(Boolean));
+    if (fresh?.length) setSugg((v) => [...v, ...fresh]);
+  };
+  const addSugg = (d) => {
+    set((x) => ({ ...x, bonuses: [...(x.bonuses || []), { ...d, id: `x-${d.id}`, extra: true, byShark: true, on: true }] }));
+    setSugg((v) => v.filter((y) => y.id !== d.id));
+  };
+  const addOwn = () => {
+    if (!own?.name?.trim()) return;
+    set((x) => ({ ...x, bonuses: [...(x.bonuses || []), { id: `u${Date.now()}`, extra: true, mine: true, on: true, for: own.for || null, name: own.name.trim(), what: '', kind: 'כלי', value: Number(own.value) || 0, basis: 'separate', note: (own.note || '').trim() }] }));
+    setOwn(null);
+  };
+  const drop = (id) => set((x) => ({ ...x, bonuses: x.bonuses.filter((b) => b.id !== id) }));
   const list = s.bonuses || [];
   const setB = (id, p) => set((x) => ({ ...x, bonuses: x.bonuses.map((b) => (b.id === id ? { ...b, ...p } : b)) }));
   const pOf = (pid) => s.problems.find((p) => p.id === pid);
@@ -23,7 +56,10 @@ export function ValueScreen({ s, set, aside, onPrice, onSuggest, busyId }) {
     <span class=${cx('shrink-0 rounded-full px-2 py-0.5 text-[12px] font-bold', on ? 'bg-money-50 text-money' : 'bg-warn-50 text-warn')}>${on ? 'יש לזה תשובה' : 'עוד פתוח'}</span>
   </div>`;
   return html`<${Screen} title=${['שווה ', 'הרבה יותר', ' מהמחיר?']} sub='הלקוח צריך להרגיש שהוא מקבל הרבה יותר ממה שהוא משלם. פי 2 זה המינימום, ושואפים ליותר. לא מורידים מחיר, מוסיפים ערך.' aside=${aside}>
-    <div class="top-0 z-[2] -mx-2 bg-canvas/95 px-2 pb-3 pt-1 backdrop-blur md:sticky">
+    <div class="sticky top-0 z-[3] h-0">
+      <div class=${cx('absolute inset-x-0 top-2 transition duration-200', stuck ? 'opacity-100' : 'pointer-events-none -translate-y-2 opacity-0')}><${ValueStrip} value=${total(s)} price=${s.price} /></div>
+    </div>
+    <div ref=${meterRef}>
       <${ValueMeter}
         value=${total(s)}
         comps=${compsTotal(s)}
@@ -50,20 +86,54 @@ export function ValueScreen({ s, set, aside, onPrice, onSuggest, busyId }) {
               <div class="mt-2.5 border-t border-dashed border-line pt-2.5"><${Button} variant="mini" onClick=${() => onSuggest(b)} disabled=${busyId === b.id}><${Icon} name="sparkles" size=${15} />${busyId === b.id ? 'הכריש חושב...' : 'הכריש יציע בונוס שעונה על זה'}<//></div>
             </div>`;
           return html`<div key=${b.id} class=${cx('rounded-2xl border-[1.5px] p-3.5 transition', b.on ? 'border-line bg-white' : 'border-dashed border-line bg-transparent')}>
-            ${said(p, b.on)}
+            ${p ? said(p, b.on) : html`<div class="flex items-center gap-2 text-[14px] text-muted"><${Icon} name="gift" size=${16} class="shrink-0" />בונוס נוסף${b.mine ? ' שהוספת' : ''}</div>`}
             <div class="mt-2.5 flex items-center gap-3 border-t border-dashed border-line pt-2.5">
               <button type="button" role="switch" aria-checked=${b.on} aria-label=${b.on ? 'להוציא את הבונוס' : 'להכניס את הבונוס'} onClick=${() => setB(b.id, { on: !b.on })} class=${cx('relative h-7 w-12 shrink-0 rounded-full transition-colors cursor-pointer', b.on ? 'bg-brand-600' : 'bg-line')}>
                 <span class=${cx('absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all', b.on ? 'right-6' : 'right-1')}></span>
               </button>
               <div class=${cx('min-w-0 flex-1', !b.on && 'opacity-60')}>
-                <span class="block text-[12px] font-bold text-brand-600">הבונוס שעונה על זה</span>
+                <span class="block text-[12px] font-bold text-brand-600">${p ? 'הבונוס שעונה על זה' : 'הבונוס'}</span>
                 <b class="block font-display text-[16px] leading-tight"><${InlineEdit} value=${b.name} onSave=${(v) => setB(b.id, { name: v })} placeholder="שם לבונוס" /></b>
                 ${b.what && html`<span class="mt-0.5 block text-[13px] leading-snug text-muted">${b.what}</span>`}
               </div>
               <span class=${cx('shrink-0', !b.on && 'opacity-60')}><${MoneyEdit} value=${b.value} onSave=${(v) => setB(b.id, { value: v })} /></span>
+              ${b.extra && html`<button type="button" onClick=${() => drop(b.id)} aria-label="למחוק את הבונוס" title="למחוק" class="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted hover:bg-error-50 hover:text-error cursor-pointer"><${Icon} name="trash-2" size=${16} /></button>`}
             </div>
           </div>`;
         })}
+      </div>
+      ${sugg.length > 0 && html`<section class="rise mt-4 rounded-3xl border-[1.5px] border-dashed border-brand-300 bg-white/70 p-3 md:p-4">
+        <p class="mb-3 flex items-center gap-2 px-1 font-display text-[16px] font-black"><${Icon} name="sparkles" size=${17} class="text-brand-600" />הכריש מציע</p>
+        <div class="flex flex-col gap-2">${sugg.map((d) => {
+          const p = pOf(d.for);
+          return html`<div key=${d.id} class="rise flex items-start gap-3 rounded-2xl bg-white p-3.5 ring-1 ring-line">
+            <div class="min-w-0 flex-1">
+              <b class="block text-[15px] leading-snug">${d.name}</b>
+              ${d.what && html`<span class="mt-0.5 block text-[13px] leading-snug text-muted">${d.what}</span>`}
+              ${p && html`<span class="mt-1 block truncate text-[13px] text-muted">עונה על: "${p.text}"</span>`}
+            </div>
+            <b class="shrink-0 pt-0.5 font-display tabular-nums">${fmt(d.value)}</b>
+            <${Button} variant="mini" class="shrink-0" onClick=${() => addSugg(d)}><${Icon} name="plus" size=${15} />להוסיף<//>
+          </div>`;
+        })}</div>
+      </section>`}
+      ${own && html`<div class="rise mt-4 rounded-2xl bg-white p-3.5 ring-1 ring-brand-300">
+        <p class="mb-2.5 font-display text-[16px] font-bold">בונוס משלך</p>
+        <div class="flex gap-2 max-sm:flex-col">
+          <input class=${inputCls} autofocus placeholder="השם של הבונוס" value=${own.name} onInput=${(e) => setOwn({ ...own, name: e.target.value })} aria-label="השם של הבונוס" />
+          <input class=${cx(inputCls, 'sm:w-32')} inputmode="numeric" placeholder="שווי ב-₪" value=${own.value} onInput=${(e) => setOwn({ ...own, value: e.target.value.replace(/[^0-9]/g, '') })} aria-label="שווי בשקלים" />
+        </div>
+        <input class=${cx(inputCls, 'mt-2')} placeholder="מאיפה המספר? למשל: כמה זה עולה בנפרד" value=${own.note} onInput=${(e) => setOwn({ ...own, note: e.target.value })} aria-label="מאיפה המספר" />
+        <p class="mb-1.5 mt-3 text-[13px] font-bold text-muted">על איזה משפט של הלקוח הוא עונה? (לא חובה)</p>
+        <div class="flex flex-wrap gap-1.5">${s.problems.filter((p) => p.on).map((p) => html`<button key=${p.id} type="button" onClick=${() => setOwn({ ...own, for: own.for === p.id ? null : p.id })} class=${cx('rounded-full border-[1.5px] px-2.5 py-1 text-start text-[13px] font-semibold cursor-pointer', own.for === p.id ? 'border-brand-600 bg-brand-100 text-brand-600' : 'border-line bg-white hover:border-brand-300')}>"${p.text}"</button>`)}</div>
+        <div class="mt-3 flex items-center gap-2">
+          <${Button} variant="mini" onClick=${addOwn} disabled=${!own.name.trim()}><${Icon} name="plus" size=${15} />להוסיף<//>
+          <button type="button" onClick=${() => setOwn(null)} class="text-[14px] font-bold text-muted hover:text-ink cursor-pointer">ביטול</button>
+        </div>
+      </div>`}
+      <div class="mt-4 flex flex-wrap items-center gap-2">
+        <${Button} variant="secondary" onClick=${more} disabled=${busyMore}><${Icon} name="sparkles" size=${16} />${busyMore ? 'הכריש חושב...' : 'הכריש יציע עוד בונוסים'}<//>
+        ${!own && html`<${Button} variant="text" onClick=${() => setOwn({ name: '', value: '', note: '', for: null })}><${Icon} name="plus" size=${16} />בונוס משלך<//>`}
       </div>
     </section>
   <//>`;

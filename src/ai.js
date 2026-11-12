@@ -127,6 +127,16 @@ export async function bonus(text) {
   });
 }
 
+// "הכריש יציע עוד בונוסים" once the written suggestions are used: three new ones in one call.
+export async function moreBonuses(s, taken) {
+  const probs = s.problems.filter((p) => p.on);
+  const out = await ask({
+    task: `שלב 8 בראיון: עוד שלושה בונוסים להצעה, מעבר לאלה שכבר יש: ${taken.map((n) => `"${n}"`).join(', ') || 'אין'}. כל בונוס עונה על משפט אחד של הלקוח מהרשימה: ${probs.map((p) => `${p.id}: "${p.text}"`).join('; ')}. כלי, תבנית או רשימת בדיקה עדיפים על הדרכה. בעלות נמוכה לך, ושווה ללקוח הרבה. לכל בונוס: for (המזהה של המשפט), name, what (משפט אחד), kind, value (מספר בשקלים), note (מאיפה המספר).`,
+    schema: obj({ items: { type: 'array', items: obj({ for: { type: 'string', enum: probs.map((p) => p.id) }, name: str, what: str, kind: str, value: { type: 'integer' }, note: str }) } }),
+  });
+  return out.items.slice(0, 3).map((b, i) => ({ ...b, id: `ai${Date.now()}${i}`, basis: 'separate' }));
+}
+
 // Part 6: names (interview stage 11).
 export async function names(s) {
   const out = await ask({
